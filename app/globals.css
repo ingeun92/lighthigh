@@ -1,7 +1,19 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
+/* ── lighthigh "Floodlit Matchday" 토큰 ── */
+@theme {
+  --color-pitch: #0c1322; /* 야간 경기장 하늘 (블랙 회피) */
+  --color-stand: #141c30; /* 카드 표면 */
+  --color-stand2: #1b2540; /* 들린 표면 */
+  --color-flood: #ffcc4d; /* 조명등 앰버 (시그니처) */
+  --color-flood-soft: #ffe28a;
+  --color-chalk: #eaeff8; /* 라인 마킹 화이트 */
+  --color-fog: #7e8aa6; /* 흐린 텍스트 */
+  --color-live: #ff5466; /* 진행중 신호 (절제) */
+  --color-line: rgba(255, 255, 255, 0.08);
+
+  --font-display: var(--font-archivo);
+  --font-sans: var(--font-plex-kr);
 }
 
 html {
@@ -9,6 +21,83 @@ html {
 }
 
 body {
-  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: var(--font-plex-kr), -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* 다크 테마 키보드 포커스 가시성 */
+:focus-visible {
+  outline: 2px solid var(--color-flood);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 방송 자막 라벨 (eyebrow) */
+.eyebrow {
+  font-family: var(--font-display), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  font-size: 0.625rem;
+}
+
+/* 점등된 전광판 숫자 */
+.scoreline {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* 조명 켜진 하이라이트 바 */
+.lit {
+  box-shadow:
+    0 0 0 1px rgba(255, 204, 77, 0.35),
+    0 8px 30px -8px rgba(255, 204, 77, 0.55);
+}
+
+/* 시그니처: 로드 시 조명 warm-up (1회) */
+.flood {
+  background: radial-gradient(
+    115% 80% at 50% -12%,
+    rgba(255, 204, 77, 0.26),
+    rgba(255, 204, 77, 0.05) 42%,
+    transparent 66%
+  );
+}
+@keyframes flood-warm {
+  0% {
+    opacity: 0;
+    filter: blur(14px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+.flood-warm {
+  animation: flood-warm 0.85s ease-out both;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+.live-dot {
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flood-warm,
+  .live-dot {
+    animation: none !important;
+    filter: none;
+    opacity: 1;
+  }
 }

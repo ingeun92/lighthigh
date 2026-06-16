@@ -38,21 +38,24 @@ export default function HighlightViewer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col bg-pitch/85 backdrop-blur-sm"
       onClick={close}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="mt-auto w-full rounded-t-2xl bg-neutral-900 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-white sm:mx-auto sm:my-auto sm:max-w-lg sm:rounded-2xl"
+        className="mt-auto w-full rounded-t-2xl border-t border-line bg-stand p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-chalk sm:mx-auto sm:my-auto sm:max-w-lg sm:rounded-2xl sm:border"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-medium">
-            {match.home.flag} {match.home.nameKo} {match.homeScore}:{match.awayScore}{" "}
-            {match.away.nameKo} {match.away.flag}
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+            <span>{match.home.flag} {match.home.nameKo}</span>
+            <span className="scoreline text-base text-flood">
+              {match.homeScore}:{match.awayScore}
+            </span>
+            <span>{match.away.nameKo} {match.away.flag}</span>
           </p>
-          <button onClick={close} className="rounded-full px-3 py-1 text-sm text-neutral-300 hover:bg-white/10">
+          <button onClick={close} className="rounded-full px-3 py-1 text-sm text-fog hover:bg-white/10">
             ✕ 닫기
           </button>
         </div>
@@ -73,30 +76,30 @@ export default function HighlightViewer({
               href={embed.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-center text-xs text-neutral-400 underline"
+              className="block text-center text-xs text-flood/80 underline"
             >
               재생이 안 되면 YouTube 에서 열기 ↗
             </a>
           </div>
         ) : (
-          <p className="mb-3 rounded-lg bg-white/5 px-3 py-4 text-center text-sm text-neutral-300">
+          <p className="mb-3 rounded-lg bg-stand2 px-3 py-4 text-center text-sm text-fog">
             이 경기 하이라이트는 외부에서 열립니다.
           </p>
         )}
 
         {others.length > 0 && (
           <div className="mt-4 space-y-2">
-            {embed && <p className="text-xs text-neutral-400">다른 하이라이트</p>}
+            {embed && <p className="eyebrow text-fog">다른 하이라이트</p>}
             {others.map((h) => (
               <a
                 key={h.id}
                 href={h.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 text-sm hover:bg-white/15"
+                className="flex items-center justify-between rounded-xl bg-stand2 px-4 py-3 text-sm hover:brightness-125"
               >
-                <span className="truncate">{h.title ?? sourceLabel(h)}</span>
-                <span className="ml-2 shrink-0 text-neutral-400">{sourceLabel(h)} ↗</span>
+                <span className="truncate text-chalk">{h.title ?? sourceLabel(h)}</span>
+                <span className="ml-2 shrink-0 text-fog">{sourceLabel(h)} ↗</span>
               </a>
             ))}
           </div>

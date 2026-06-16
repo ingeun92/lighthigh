@@ -35,6 +35,19 @@ export function kstTime(iso: string): string {
   }).format(new Date(iso));
 }
 
+export function kstChip(iso: string): string {
+  // '6.16 월' (날짜 칩용 짧은 라벨)
+  const md = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: KST,
+    month: "numeric",
+    day: "numeric",
+  }).format(new Date(iso));
+  const wd = new Intl.DateTimeFormat("ko-KR", { timeZone: KST, weekday: "short" }).format(
+    new Date(iso)
+  );
+  return `${md.replace(/\.$/, "").replace(/\. /, ".")} ${wd}`;
+}
+
 export interface DateGroup {
   key: string;
   label: string;
