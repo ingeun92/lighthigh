@@ -1,4 +1,4 @@
-import { getAdminData, type MatchOption } from "@/lib/admin-data";
+import { getAdminData, type MatchOption, type AdminHighlight } from "@/lib/admin-data";
 import {
   reassignHighlight,
   deleteHighlight,
@@ -24,13 +24,63 @@ function MatchOptions({ matches }: { matches: MatchOption[] }) {
   );
 }
 
-const selectCls =
-  "min-w-0 flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-xs";
+const selectCls = "min-w-0 flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-xs";
 const btn = "rounded-lg px-3 py-1.5 text-xs font-semibold";
 
+// 경기 그룹 내 개별 하이라이트
+function HighlightItem({ h, matches }: { h: AdminHighlight; matches: MatchOption[] }) {
+  return (
+    <div
+      className={`rounded-lg border p-3 ${
+        h.isPrimary
+          ? "border-blue-300 bg-blue-50/40"
+          : h.clean
+            ? "border-neutral-200"
+            : "border-amber-300 bg-amber-50/40"
+      }`}
+    >
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <p className="min-w-0 text-sm font-medium">
+          {!h.clean && <span className="mr-1 text-amber-600">⚠️</span>}
+          <span className="break-words">{h.title}</span>
+        </p>
+        <span className="flex shrink-0 items-center gap-1 text-xs text-neutral-400">
+          {h.isPrimary && (
+            <span className="rounded bg-blue-600 px-1.5 py-0.5 text-[0.65rem] font-bold text-white">
+              대표
+            </span>
+          )}
+          {h.source === "chzzk" ? "치지직" : "YT"}
+          {h.embeddable ? "·임베드" : ""}
+        </span>
+      </div>
+      <p className="mb-2 text-xs text-neutral-400">{h.channel}</p>
+      <div className="flex items-center gap-2">
+        <form action={reassignHighlight} className="flex flex-1 items-center gap-2">
+          <input type="hidden" name="id" value={h.id} />
+          <select name="matchId" className={selectCls} defaultValue={h.matchId} title="다른 경기로 이동">
+            <MatchOptions matches={matches} />
+          </select>
+          <button className={`${btn} bg-neutral-900 text-white`}>이동</button>
+        </form>
+        {h.source === "youtube" && h.embeddable && !h.isPrimary && (
+          <form action={featureHighlight}>
+            <input type="hidden" name="id" value={h.id} />
+            <button className={`${btn} bg-blue-600 text-white`}>맨 위로</button>
+          </form>
+        )}
+        <form action={deleteHighlight}>
+          <input type="hidden" name="id" value={h.id} />
+          <button className={`${btn} bg-red-50 text-red-600`}>삭제</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default async function AdminPage() {
-  const { matches, highlights, candidates } = await getAdminData();
-  const needsReview = highlights.filter((h) => !h.clean).length;
+  const { matches, highlightGroups, candidates } = await getAdminData();
+  const reviewCount = highlightGroups.filter((g) => g.mismatchCount > 0).length;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
@@ -38,7 +88,7 @@ export default async function AdminPage() {
         <div>
           <h1 className="text-xl font-bold">lighthigh 관리자</h1>
           <p className="text-sm text-neutral-500">
-            하이라이트 {highlights.length}개 · 확인 필요 {needsReview}개 · 후보 {candidates.length}개
+            {highlightGroups.length}경기 · 교정 필요 {reviewCount}경기 · 후보 {candidates.length}개
           </p>
         </div>
         <form action={logout}>
@@ -48,12 +98,8 @@ export default async function AdminPage() {
 
       {/* ── 후보 큐 ── */}
       <section className="mb-8">
-        <h2 className="mb-3 text-sm font-bold text-neutral-800">
-          🗂 미매칭 후보 ({candidates.length})
-        </h2>
-        {candidates.length === 0 && (
-          <p className="text-sm text-neutral-400">검토할 후보가 없습니다.</p>
-        )}
+        <h2 className="mb-3 text-sm font-bold text-neutral-800">🗂 미매칭 후보 ({candidates.length})</h2>
+        {candidates.length === 0 && <p className="text-sm text-neutral-400">검토할 후보가 없습니다.</p>}
         <div className="space-y-3">
           {candidates.map((c) => (
             <div key={c.id} className="rounded-xl border border-neutral-200 bg-white p-3">
@@ -87,65 +133,43 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* ── 하이라이트 교정 ── */}
+      {/* ── 하이라이트 교정 (경기별 접이식) ── */}
       <section className="mb-8">
-        <h2 className="mb-3 text-sm font-bold text-neutral-800">
-          🔧 하이라이트 교정 ({highlights.length})
+        <h2 className="mb-1 text-sm font-bold text-neutral-800">
+          🔧 하이라이트 교정 — 경기별 ({highlightGroups.length}경기)
         </h2>
         <p className="mb-3 text-xs text-neutral-500">
-          ⚠️ 표시는 제목에 양 팀명이 모두 없어 오매칭 의심. <b className="text-blue-600">대표</b> 는 앱에서 맨 위에
-          임베드되는 영상 — 부적합하면 다른 임베드 영상에서 <b>맨 위로</b> 를 누르세요.
+          ⚠️ 있는 경기는 자동으로 펼쳐집니다. <b className="text-blue-600">대표</b> 는 앱 맨 위 임베드 영상 —
+          부적합하면 다른 임베드 영상에서 <b>맨 위로</b>.
         </p>
-        <div className="space-y-3">
-          {highlights.map((h) => (
-            <div
-              key={h.id}
-              className={`rounded-xl border bg-white p-3 ${
-                h.isPrimary
-                  ? "border-blue-300 bg-blue-50/40"
-                  : h.clean
-                    ? "border-neutral-200"
-                    : "border-amber-300 bg-amber-50/40"
-              }`}
+        <div className="space-y-2">
+          {highlightGroups.map((g) => (
+            <details
+              key={g.matchId}
+              open={g.mismatchCount > 0}
+              className="group rounded-xl border border-neutral-200 bg-white"
             >
-              <div className="mb-2 flex items-start justify-between gap-2">
-                <p className="min-w-0 text-sm font-medium">
-                  {!h.clean && <span className="mr-1 text-amber-600">⚠️</span>}
-                  <span className="break-words">{h.title}</span>
-                </p>
-                <span className="flex shrink-0 items-center gap-1 text-xs text-neutral-400">
-                  {h.isPrimary && (
-                    <span className="rounded bg-blue-600 px-1.5 py-0.5 text-[0.65rem] font-bold text-white">
-                      대표
-                    </span>
-                  )}
-                  {h.source === "chzzk" ? "치지직" : "YT"}
-                  {h.embeddable ? "·임베드" : ""}
-                </span>
-              </div>
-              <p className="mb-2 text-xs text-neutral-500">
-                현재 연결: <b>{h.homeKo} vs {h.awayKo}</b> · {h.channel}
-              </p>
-              <div className="flex items-center gap-2">
-                <form action={reassignHighlight} className="flex flex-1 items-center gap-2">
-                  <input type="hidden" name="id" value={h.id} />
-                  <select name="matchId" className={selectCls} defaultValue={h.matchId}>
-                    <MatchOptions matches={matches} />
-                  </select>
-                  <button className={`${btn} bg-neutral-900 text-white`}>저장</button>
-                </form>
-                {h.source === "youtube" && h.embeddable && !h.isPrimary && (
-                  <form action={featureHighlight}>
-                    <input type="hidden" name="id" value={h.id} />
-                    <button className={`${btn} bg-blue-600 text-white`}>맨 위로</button>
-                  </form>
+              <summary className="flex cursor-pointer list-none items-center gap-2 p-3 [&::-webkit-details-marker]:hidden">
+                <span className="text-neutral-400 transition-transform group-open:rotate-90">▸</span>
+                <span className="flex-1 text-sm font-bold text-neutral-800">{g.label}</span>
+                {g.mismatchCount > 0 && (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.65rem] font-bold text-amber-700">
+                    ⚠️ {g.mismatchCount}
+                  </span>
                 )}
-                <form action={deleteHighlight}>
-                  <input type="hidden" name="id" value={h.id} />
-                  <button className={`${btn} bg-red-50 text-red-600`}>삭제</button>
-                </form>
+                {!g.hasPrimary && (
+                  <span className="rounded-full bg-red-50 px-2 py-0.5 text-[0.65rem] font-bold text-red-600">
+                    대표 없음
+                  </span>
+                )}
+                <span className="text-xs text-neutral-400">{g.items.length}개</span>
+              </summary>
+              <div className="space-y-3 border-t border-neutral-100 p-3">
+                {g.items.map((h) => (
+                  <HighlightItem key={h.id} h={h} matches={matches} />
+                ))}
               </div>
-            </div>
+            </details>
           ))}
         </div>
       </section>

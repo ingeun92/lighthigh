@@ -56,9 +56,18 @@ interface HighlightRow {
   match: { home: TeamName | null; away: TeamName | null } | null;
 }
 
+export interface HighlightGroup {
+  matchId: number;
+  label: string;
+  items: AdminHighlight[];
+  mismatchCount: number; // 오매칭 의심(⚠️) 개수
+  hasPrimary: boolean; // 임베드 대표 영상 존재 여부
+}
+
 export interface AdminData {
   matches: MatchOption[];
   highlights: AdminHighlight[];
+  highlightGroups: HighlightGroup[];
   candidates: AdminCandidate[];
 }
 
@@ -139,5 +148,29 @@ export async function getAdminData(): Promise<AdminData> {
     thumbnailUrl: (c as unknown as { thumbnail_url: string | null }).thumbnail_url,
   }));
 
-  return { matches, highlights, candidates };
+  // 경기별 그룹 (highlights 는 이미 match_id, sort_order, id 순)
+  const labelById = new Map(matches.map((m) => [m.id, m.label]));
+  const groupMap = new Map<number, HighlightGroup>();
+  for (const h of highlights) {
+    let g = groupMap.get(h.matchId);
+    if (!g) {
+      g = {
+        matchId: h.matchId,
+        label: labelById.get(h.matchId) ?? `${h.homeKo} vs ${h.awayKo}`,
+        items: [],
+        mismatchCount: 0,
+        hasPrimary: false,
+      };
+      groupMap.set(h.matchId, g);
+    }
+    g.items.push(h);
+    if (!h.clean) g.mismatchCount += 1;
+    if (h.isPrimary) g.hasPrimary = true;
+  }
+  // 교정 필요한 경기(오매칭 의심)를 먼저
+  const highlightGroups = [...groupMap.values()].sort(
+    (a, b) => b.mismatchCount - a.mismatchCount
+  );
+
+  return { matches, highlights, highlightGroups, candidates };
 }
