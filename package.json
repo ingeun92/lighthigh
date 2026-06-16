@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "verify:sources": "node --env-file=.env.local scripts/verify-sources.mjs",
-    "sync:matches": "node --env-file=.env.local scripts/sync-matches.mjs"
+    "sync:matches": "node --env-file=.env.local scripts/sync-matches.mjs",
+    "collect:highlights": "node --env-file=.env.local scripts/collect-highlights.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
