@@ -2,11 +2,11 @@
 // YouTube 공식 채널에서 월드컵 하이라이트를 수집해 경기에 자동 매칭한다.
 // 실행: pnpm collect:highlights
 //
-// 흐름: 채널 uploads 순회(playlistItems, 저비용)
+// 흐름: 채널 uploads 순회(playlistItems, 다중 페이지)
 //   → 하이라이트 키워드 필터 → 제목의 팀명으로 DB 경기 매칭
 //   → videos.list 로 embeddable 확인 → 매칭되면 highlights, 아니면 highlight_candidates
 //
-// quota: 채널당 channels.list(1) + playlistItems(수 unit) + videos.list(1~2). 일 수십 unit.
+// quota: 채널당 channels(1) + playlistItems(페이지수) + videos(ids/50). 일 수십~수백 unit.
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -21,10 +21,14 @@ if (!YT_KEY || !SB_URL || !SB_SERVICE) {
 
 const supabase = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false } });
 
-// 수집 대상 채널 (검증된 곳부터). KBS 정식 채널 확인되면 추가.
-const CHANNELS = [{ name: "JTBC Sports", handle: "JTBC_sports" }];
+// 2026 월드컵 하이라이트 게시 확인된 공식 채널 (search 발굴 결과)
+const CHANNELS = [
+  { name: "JTBC Sports", handle: "JTBC_sports" },
+  { name: "KBS News", channelId: "UCcQTRi69dsVYHN3exePtZ1A" },
+  { name: "JTBC News", channelId: "UCsU-I-vHLiaMfV_ceaYz5rQ" },
+];
 const HIGHLIGHT_KEYWORDS = ["하이라이트", "골 장면", "골장면", "풀타임", "주요장면"];
-const MAX_PER_CHANNEL = 50;
+const MAX_PAGES = 4; // 채널당 최대 50×4 = 200개 업로드 스캔
 
 const yt = async (path, params) => {
   const qs = new URLSearchParams({ ...params, key: YT_KEY }).toString();
@@ -33,21 +37,41 @@ const yt = async (path, params) => {
   return r.json();
 };
 
-async function uploadsPlaylist(handle) {
-  const data = await yt("channels", { part: "contentDetails,snippet", forHandle: handle });
+async function uploadsPlaylist(ch) {
+  const params = ch.channelId
+    ? { part: "contentDetails,snippet", id: ch.channelId }
+    : { part: "contentDetails,snippet", forHandle: ch.handle };
+  const data = await yt("channels", params);
   const item = data.items?.[0];
-  return item ? { title: item.snippet.title, uploads: item.contentDetails.relatedPlaylists.uploads } : null;
+  return item
+    ? { title: item.snippet.title, uploads: item.contentDetails.relatedPlaylists.uploads }
+    : null;
 }
 
-function isHighlight(title) {
+async function fetchUploads(playlistId) {
+  const all = [];
+  let pageToken;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const data = await yt("playlistItems", {
+      part: "snippet,contentDetails",
+      maxResults: "50",
+      playlistId,
+      ...(pageToken ? { pageToken } : {}),
+    });
+    all.push(...(data.items ?? []));
+    pageToken = data.nextPageToken;
+    if (!pageToken) break;
+  }
+  return all;
+}
+
+const isHighlight = (title) => {
   const t = title.toLowerCase();
   return HIGHLIGHT_KEYWORDS.some((k) => t.includes(k.toLowerCase()));
-}
+};
 
-// 제목에 등장하는 팀(name_ko) 들을 찾아 경기 매칭
 function findMatch(title, teams, matchesByPair) {
   const present = teams.filter((t) => title.includes(t.name_ko));
-  // 가장 긴 이름 우선(부분 포함 충돌 방지), 상위 2개 사용
   present.sort((a, b) => b.name_ko.length - a.name_ko.length);
   for (let i = 0; i < present.length; i++) {
     for (let j = i + 1; j < present.length; j++) {
@@ -61,8 +85,18 @@ function findMatch(title, teams, matchesByPair) {
 const sortRank = (title) =>
   /3분 하이라이트|풀\s*하이라이트|풀타임/.test(title) ? 0 : /골\s*장면/.test(title) ? 1 : 2;
 
+const chunk = (arr, n) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
+
+async function embeddableMap(ids) {
+  const map = new Map();
+  for (const batch of chunk(ids, 50)) {
+    const data = await yt("videos", { part: "status", id: batch.join(",") });
+    for (const v of data.items ?? []) map.set(v.id, v.status?.embeddable === true);
+  }
+  return map;
+}
+
 async function main() {
-  // DB 에서 팀/경기 로드 (매칭용)
   const { data: teams } = await supabase.from("teams").select("id, name_ko");
   const { data: matches } = await supabase.from("matches").select("id, home_team_id, away_team_id");
   const matchesByPair = new Map();
@@ -72,46 +106,46 @@ async function main() {
     }
   }
 
-  let matched = 0, candidates = 0, scanned = 0;
+  let scanned = 0;
   const highlightRows = [];
   const candidateRows = [];
+  const seenVid = new Set(); // 채널 간 중복 영상 방지
 
   for (const ch of CHANNELS) {
-    const resolved = await uploadsPlaylist(ch.handle);
+    const resolved = await uploadsPlaylist(ch);
     if (!resolved?.uploads) { console.warn(`! ${ch.name} 채널 조회 실패`); continue; }
-    const pl = await yt("playlistItems", {
-      part: "snippet,contentDetails", maxResults: String(MAX_PER_CHANNEL), playlistId: resolved.uploads,
-    });
-    const items = (pl.items ?? []).filter((v) => isHighlight(v.snippet?.title ?? ""));
+    const uploads = await fetchUploads(resolved.uploads);
+    const items = uploads.filter((v) => isHighlight(v.snippet?.title ?? ""));
     scanned += items.length;
-    if (items.length === 0) continue;
+    if (items.length === 0) { console.log(`  · ${ch.name}: 하이라이트 0건`); continue; }
 
-    // embeddable 확인 (배치)
     const ids = items.map((v) => v.contentDetails.videoId);
-    const vids = await yt("videos", { part: "status,snippet", id: ids.join(",") });
-    const statusById = new Map((vids.items ?? []).map((v) => [v.id, v.status?.embeddable === true]));
+    const embed = await embeddableMap(ids);
+    let chMatched = 0, chCand = 0;
 
     for (const v of items) {
       const vid = v.contentDetails.videoId;
+      if (seenVid.has(vid)) continue;
+      seenVid.add(vid);
       const title = v.snippet.title;
-      const embeddable = statusById.get(vid) ?? false;
-      const matchId = findMatch(title, teams ?? [], matchesByPair);
       const base = {
-        source: "youtube", video_id: vid, title,
-        channel: resolved.title, thumbnail_url: v.snippet.thumbnails?.medium?.url ?? null,
+        source: "youtube", video_id: vid, title, channel: resolved.title,
+        thumbnail_url: v.snippet.thumbnails?.medium?.url ?? null,
         published_at: v.contentDetails.videoPublishedAt ?? v.snippet.publishedAt,
       };
+      const matchId = findMatch(title, teams ?? [], matchesByPair);
       if (matchId) {
         highlightRows.push({
-          match_id: matchId, ...base, embeddable, is_approved: true,
+          match_id: matchId, ...base, embeddable: embed.get(vid) ?? false, is_approved: true,
           url: `https://www.youtube.com/watch?v=${vid}`, sort_order: sortRank(title),
         });
-        matched++;
+        chMatched++;
       } else {
-        candidateRows.push({ ...base, channel_id: ch.handle, embeddable, review: "pending" });
-        candidates++;
+        candidateRows.push({ ...base, channel_id: ch.channelId ?? ch.handle, embeddable: embed.get(vid) ?? false, review: "pending" });
+        chCand++;
       }
     }
+    console.log(`  · ${ch.name}: 하이라이트 ${items.length}건 (매칭 ${chMatched}, 미매칭 ${chCand})`);
   }
 
   if (highlightRows.length) {
@@ -123,9 +157,9 @@ async function main() {
     if (error) console.error("! candidates upsert 경고:", error.message);
   }
 
-  console.log(`✓ 수집 완료 — 하이라이트 키워드 영상 ${scanned}건 중`);
-  console.log(`  · 경기 자동매칭: ${matched}건 → highlights`);
-  console.log(`  · 미매칭(검토 대기): ${candidates}건 → highlight_candidates`);
+  console.log(`\n✓ 수집 완료 — 키워드 영상 ${scanned}건`);
+  console.log(`  · 경기 자동매칭: ${highlightRows.length}건 → highlights`);
+  console.log(`  · 미매칭(검토 대기): ${candidateRows.length}건 → highlight_candidates`);
 }
 
 main().catch((e) => { console.error("✗ 오류:", e.message); process.exit(1); });
