@@ -66,7 +66,7 @@ export default function HighlightViewer({
       aria-modal="true"
     >
       <div
-        className="mt-auto flex max-h-[88vh] w-full flex-col rounded-t-3xl bg-card text-ink sm:mt-0 sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl sm:shadow-2xl"
+        className="mt-auto flex max-h-[88vh] w-full flex-col rounded-t-3xl bg-card text-ink [transform:translateZ(0)] [backface-visibility:hidden] sm:mt-0 sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl sm:shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
