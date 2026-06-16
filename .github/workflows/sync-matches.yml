@@ -18,13 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
+      - uses: pnpm/action-setup@v6 # 버전은 package.json packageManager(pnpm@10.x) 에서 자동 감지
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "24" # 네이티브 TypeScript 타입 스트리핑(.ts import) 지원
           cache: pnpm

@@ -135,6 +135,9 @@ async function main() {
 
   const { data: teams } = await supabase.from("teams").select("id, name_ko");
   const { data: matches } = await supabase.from("matches").select("id, home_team_id, away_team_id");
+  // 이미 highlights 에 있는 영상(관리자 승인 또는 자동매칭됨)은 후보 큐에 다시 넣지 않는다.
+  const { data: existingHls } = await supabase.from("highlights").select("video_id");
+  const inHighlights = new Set((existingHls ?? []).map((h) => h.video_id));
   const matchesByPair = new Map();
   for (const m of matches ?? []) {
     if (m.home_team_id && m.away_team_id) {
@@ -176,7 +179,7 @@ async function main() {
           url: `https://www.youtube.com/watch?v=${vid}`, sort_order: sortRank(title),
         });
         chMatched++;
-      } else {
+      } else if (!inHighlights.has(vid)) {
         candidateRows.push({ ...base, channel_id: ch.channelId ?? ch.handle, embeddable: embed.get(vid) ?? false, review: "pending" });
         chCand++;
       }
@@ -192,7 +195,11 @@ async function main() {
     if (error) { console.error("✗ highlights upsert 실패:", error.message); process.exit(1); }
   }
   if (candidateRows.length) {
-    const { error } = await supabase.from("highlight_candidates").upsert(candidateRows, { onConflict: "source,video_id" });
+    // ignoreDuplicates: 기존 후보의 관리자 분류(review: approved/rejected)를 보존, 신규만 삽입.
+    // (이게 없으면 review 가 매 수집마다 pending 으로 리셋돼 분류한 후보가 다시 큐에 뜬다)
+    const { error } = await supabase
+      .from("highlight_candidates")
+      .upsert(candidateRows, { onConflict: "source,video_id", ignoreDuplicates: true });
     if (error) console.error("! candidates upsert 경고:", error.message);
   }
 
