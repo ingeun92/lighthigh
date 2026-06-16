@@ -9,8 +9,8 @@ import { flagSrc } from "@/lib/countries";
 function FlagImg({ team }: { team: Team }) {
   const [err, setErr] = useState(false);
   const src = flagSrc(team.countryCode);
-  // 3:2 박스(대부분 국기 비율)에 object-contain — 비율 달라도 잘리지 않고 전체가 보인다.
-  const box = "grid h-12 w-[4.5rem] place-items-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-line";
+  // flag-icons 4x3 는 모든 국기가 정확히 4:3 → 4:3 박스 + object-cover 로 잘림·여백 없이 균일.
+  const box = "grid h-12 w-16 place-items-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-line";
   if (!src || err) {
     return <span className={`${box} text-[2rem]`}>{team.flag}</span>;
   }
@@ -22,7 +22,7 @@ function FlagImg({ team }: { team: Team }) {
         alt={`${team.nameKo} 국기`}
         onError={() => setErr(true)}
         loading="lazy"
-        className="h-full w-full object-contain"
+        className="h-full w-full object-cover"
       />
     </span>
   );

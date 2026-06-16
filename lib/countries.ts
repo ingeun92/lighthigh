@@ -78,7 +78,9 @@ export function countryFromTla(tla?: string | null, nameEn?: string): CountryInf
   return info ?? { ko: nameEn ?? tla ?? "미정", flag: "🏳️", iso2: "" };
 }
 
-// flagcdn.com SVG URL. country_code(tla) 또는 iso2 를 받는다. 매핑 없으면 null.
+// 국기 이미지 URL. country_code(tla) 또는 iso2 를 받는다. 매핑 없으면 null.
+// lipis/flag-icons 의 4x3 세트 — 모든 국기를 정확히 4:3(viewBox 640×480)로 정규화해
+// 제공하므로, 4:3 박스 + object-cover 로 잘림·여백·왜곡 없이 균일하게 표시된다.
 export function flagSrc(code?: string | null): string | null {
   if (!code) return null;
   const c = code.toLowerCase();
@@ -87,5 +89,7 @@ export function flagSrc(code?: string | null): string | null {
     c.length === 2 || c.startsWith("gb-")
       ? c
       : COUNTRY_BY_TLA[code.toUpperCase()]?.iso2 ?? "";
-  return iso2 ? `https://flagcdn.com/${iso2}.svg` : null;
+  return iso2
+    ? `https://cdn.jsdelivr.net/gh/lipis/flag-icons/flags/4x3/${iso2}.svg`
+    : null;
 }

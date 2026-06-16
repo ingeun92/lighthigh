@@ -10,8 +10,8 @@ const sourceLabel = (h: Highlight) =>
 
 function FlagMini({ team }: { team: Team }) {
   const src = flagSrc(team.countryCode);
-  // 3:2 박스 + object-contain — 비율 달라도 잘리지 않고 전체가 보인다.
-  const box = "grid h-5 w-[1.875rem] shrink-0 place-items-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-line";
+  // flag-icons 4x3 → 4:3 박스 + object-cover 로 잘림·여백 없이 균일.
+  const box = "grid h-5 w-[1.667rem] shrink-0 place-items-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-line";
   if (!src) return <span className={`${box} text-xs`}>{team.flag}</span>;
   return (
     <span className={box}>
@@ -20,7 +20,7 @@ function FlagMini({ team }: { team: Team }) {
         src={src}
         alt={`${team.nameKo} 국기`}
         loading="lazy"
-        className="h-full w-full object-contain"
+        className="h-full w-full object-cover"
       />
     </span>
   );
