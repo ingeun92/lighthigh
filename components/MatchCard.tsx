@@ -24,17 +24,6 @@ function FlagImg({ team }: { team: Team }) {
   );
 }
 
-function TeamCol({ team }: { team: Team }) {
-  return (
-    <div className="flex min-w-0 flex-col items-center gap-2">
-      <FlagImg team={team} />
-      <span className="break-keep text-center text-[0.82rem] font-bold leading-tight text-ink">
-        {team.nameKo}
-      </span>
-    </div>
-  );
-}
-
 export default function MatchCard({
   match,
   onOpenHighlights,
@@ -50,12 +39,15 @@ export default function MatchCard({
 
   const hs = match.homeScore;
   const as = match.awayScore;
-  const homeColor = played && hs != null && as != null && hs < as ? "text-muted" : "text-ink";
-  const awayColor = played && hs != null && as != null && as < hs ? "text-muted" : "text-ink";
+  const hasScore = played && hs != null && as != null;
+  const homeColor = hasScore && hs! < as! ? "text-muted" : "text-ink";
+  const awayColor = hasScore && as! < hs! ? "text-muted" : "text-ink";
+
+  const nameCls = "break-keep text-center text-[0.82rem] font-bold leading-tight text-ink";
 
   return (
     <div className="card-soft rounded-2xl border border-line bg-card p-4">
-      <div className="mb-1 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <span className="eyebrow text-muted">
           {round}
           {match.groupLabel ? ` · ${match.groupLabel}` : ""}
@@ -72,34 +64,38 @@ export default function MatchCard({
         )}
       </div>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1">
-        <TeamCol team={match.home} />
-
+      {/* 1행: 국기 · 스코어 / 2행: 국가명 — 세로 정렬 일치 */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-2 py-0.5">
+        <div className="flex justify-center">
+          <FlagImg team={match.home} />
+        </div>
         <div className="px-1 text-center">
-          {played && hs != null && as != null ? (
+          {hasScore ? (
             <div className="scoreline text-[1.9rem] leading-none">
               <span className={homeColor}>{hs}</span>
               <span className="mx-1.5 text-muted">:</span>
               <span className={awayColor}>{as}</span>
             </div>
           ) : (
-            <div>
-              <div className="scoreline text-lg leading-none text-ink">
-                {kstTime(match.kickoffUtc)}
-              </div>
-              <div className="mt-1 text-[0.6rem] font-bold text-muted">KST</div>
-            </div>
+            <div className="scoreline text-lg leading-none text-ink">{kstTime(match.kickoffUtc)}</div>
           )}
         </div>
+        <div className="flex justify-center">
+          <FlagImg team={match.away} />
+        </div>
 
-        <TeamCol team={match.away} />
+        <span className={nameCls}>{match.home.nameKo}</span>
+        <span className="text-center text-[0.6rem] font-bold text-muted">
+          {hasScore ? "" : "KST"}
+        </span>
+        <span className={nameCls}>{match.away.nameKo}</span>
       </div>
 
       {isFinished &&
         (hasHighlights ? (
           <button
             onClick={() => onOpenHighlights(match)}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-flame py-3 text-sm font-extrabold text-white transition-transform active:scale-[0.99]"
+            className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-3 text-sm font-extrabold text-white transition-transform active:scale-[0.99]"
           >
             <span aria-hidden>▸</span> 하이라이트 보기
             <span className="scoreline rounded-full bg-white/25 px-1.5 py-0.5 text-[0.7rem]">
@@ -107,7 +103,7 @@ export default function MatchCard({
             </span>
           </button>
         ) : (
-          <div className="mt-3 border-t border-line pt-2.5 text-center text-xs font-bold text-muted">
+          <div className="mt-3.5 border-t border-line pt-2.5 text-center text-xs font-bold text-muted">
             하이라이트 준비 중
           </div>
         ))}

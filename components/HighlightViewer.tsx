@@ -1,11 +1,26 @@
 "use client";
 
 import { useEffect } from "react";
-import type { Match, Highlight } from "@/lib/types";
+import type { Match, Highlight, Team } from "@/lib/types";
 import { sortHighlights, primaryEmbeddable, youtubeEmbedUrl } from "@/lib/highlights";
+import { flagSrc } from "@/lib/countries";
 
 const sourceLabel = (h: Highlight) =>
   h.source === "youtube" ? `YouTube${h.channel ? " · " + h.channel : ""}` : "치지직";
+
+function FlagMini({ team }: { team: Team }) {
+  const src = flagSrc(team.countryCode);
+  if (!src) return <span className="text-base">{team.flag}</span>;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={`${team.nameKo} 국기`}
+      loading="lazy"
+      className="h-5 w-[1.75rem] shrink-0 rounded object-cover shadow-sm ring-1 ring-line"
+    />
+  );
+}
 
 export default function HighlightViewer({
   match,
@@ -37,26 +52,28 @@ export default function HighlightViewer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-ink/45 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col bg-ink/45 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6"
       onClick={close}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="card-soft mt-auto w-full rounded-t-3xl bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-ink sm:mx-auto sm:my-auto sm:max-w-lg sm:rounded-3xl"
+        className="card-soft mt-auto max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-ink sm:mx-auto sm:mt-0 sm:max-w-2xl sm:rounded-3xl sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 flex items-center justify-between">
-          <p className="flex items-center gap-1.5 text-sm font-bold">
-            <span>{match.home.flag} {match.home.nameKo}</span>
-            <span className="scoreline text-base text-flame">
-              {match.homeScore}:{match.awayScore}
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="flex min-w-0 items-center gap-2 text-sm font-bold sm:text-base">
+            <FlagMini team={match.home} />
+            <span className="truncate">{match.home.nameKo}</span>
+            <span className="scoreline shrink-0 text-base text-accent sm:text-lg">
+              {match.homeScore} : {match.awayScore}
             </span>
-            <span>{match.away.nameKo} {match.away.flag}</span>
+            <span className="truncate">{match.away.nameKo}</span>
+            <FlagMini team={match.away} />
           </p>
           <button
             onClick={close}
-            className="rounded-full px-3 py-1 text-sm font-bold text-muted hover:bg-canvas"
+            className="shrink-0 rounded-full px-3 py-1 text-sm font-bold text-muted hover:bg-canvas"
           >
             ✕ 닫기
           </button>
@@ -78,7 +95,7 @@ export default function HighlightViewer({
               href={embed.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-center text-xs font-bold text-flame underline"
+              className="block text-center text-xs font-bold text-accent underline"
             >
               재생이 안 되면 YouTube 에서 열기 ↗
             </a>
@@ -98,7 +115,7 @@ export default function HighlightViewer({
                 href={h.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-xl border border-line bg-canvas px-4 py-3 text-sm hover:border-flame/40"
+                className="flex items-center justify-between rounded-xl border border-line bg-canvas px-4 py-3 text-sm hover:border-accent/40"
               >
                 <span className="truncate font-medium text-ink">{h.title ?? sourceLabel(h)}</span>
                 <span className="ml-2 shrink-0 font-bold text-muted">{sourceLabel(h)} ↗</span>

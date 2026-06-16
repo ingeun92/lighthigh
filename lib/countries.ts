@@ -68,7 +68,7 @@ export const COUNTRY_BY_TLA: Record<string, CountryInfo> = {
   NZL: { ko: "뉴질랜드", flag: "🇳🇿", iso2: "nz" },
   BIH: { ko: "보스니아 헤르체고비나", flag: "🇧🇦", iso2: "ba" },
   COD: { ko: "콩고민주공화국", flag: "🇨🇩", iso2: "cd" },
-  CUW: { ko: "쿠라사오", flag: "🇨🇼", iso2: "cw" },
+  CUW: { ko: "퀴라소", flag: "🇨🇼", iso2: "cw" },
   HAI: { ko: "아이티", flag: "🇭🇹", iso2: "ht" },
   IRQ: { ko: "이라크", flag: "🇮🇶", iso2: "iq" },
 };

@@ -16,9 +16,9 @@ export default async function Home() {
   return (
     <div className="mx-auto min-h-full w-full max-w-lg px-5">
       <header className="pb-4 pt-9">
-        <p className="eyebrow text-flame">2026 FIFA 월드컵</p>
+        <p className="eyebrow text-accent">2026 FIFA 월드컵</p>
         <h1 className="mt-2 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight text-ink">
-          light<span className="text-flame">high</span>
+          light<span className="text-accent">high</span>
         </h1>
         <p className="mt-2 text-[0.95rem] text-muted">월드컵 하이라이트, 일정표에서 바로</p>
         <p className="mt-4 text-sm text-muted">

@@ -27,6 +27,10 @@ export default function ScheduleList({
   const [activeKey, setActiveKey] = useState<string>(() => nearestGroupKey(groups, nowIso) ?? "");
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const cellRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const stripRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollStrip = (dir: 1 | -1) =>
+    stripRef.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
 
   // 진입 시 오늘/가장 가까운 경기로 스크롤
   useEffect(() => {
@@ -68,7 +72,28 @@ export default function ScheduleList({
       <div className="sticky top-0 z-20 -mx-5 bg-canvas/95 px-5 pb-2 pt-2 backdrop-blur">
         <p className="mb-1.5 text-xs font-bold text-muted">{activeMonth}</p>
         <div className="relative">
-          <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* 좌우 스크롤 화살표 — 스크롤 가능함을 명시 */}
+          <button
+            type="button"
+            aria-label="이전 날짜"
+            onClick={() => scrollStrip(-1)}
+            className="absolute left-0 top-1/2 z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full border border-line bg-card text-ink shadow-sm active:bg-canvas"
+          >
+            <span className="-mt-px text-sm font-bold leading-none">‹</span>
+          </button>
+          <button
+            type="button"
+            aria-label="다음 날짜"
+            onClick={() => scrollStrip(1)}
+            className="absolute right-0 top-1/2 z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full border border-line bg-card text-ink shadow-sm active:bg-canvas"
+          >
+            <span className="-mt-px text-sm font-bold leading-none">›</span>
+          </button>
+
+          <div
+            ref={stripRef}
+            className="flex gap-2 overflow-x-auto scroll-px-9 px-9 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
             {groups.map((g) => {
               const on = g.key === activeKey;
               const isToday = g.key === todayKey;
@@ -85,9 +110,9 @@ export default function ScheduleList({
                   aria-pressed={on}
                   className={`flex w-[3.1rem] shrink-0 flex-col items-center rounded-2xl border py-2 transition-colors ${
                     on
-                      ? "border-flame bg-flame text-white"
+                      ? "border-accent bg-accent text-white"
                       : isToday
-                        ? "border-flame/50 bg-card text-flame"
+                        ? "border-accent/50 bg-card text-accent"
                         : "border-line bg-card text-ink"
                   }`}
                 >
@@ -99,20 +124,17 @@ export default function ScheduleList({
                   </span>
                   <span className="mt-1 flex h-2.5 items-center">
                     {isToday ? (
-                      <span className={`text-[0.5rem] font-bold ${on ? "text-white" : "text-flame"}`}>
+                      <span className={`text-[0.5rem] font-bold ${on ? "text-white" : "text-accent"}`}>
                         오늘
                       </span>
                     ) : hasHl ? (
-                      <span className={`h-1 w-1 rounded-full ${on ? "bg-white" : "bg-flame"}`} />
+                      <span className={`h-1 w-1 rounded-full ${on ? "bg-white" : "bg-accent"}`} />
                     ) : null}
                   </span>
                 </button>
               );
             })}
           </div>
-          {/* 스크롤 가능 표시: 양 끝 페이드 */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-canvas to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-canvas to-transparent" />
         </div>
       </div>
 
