@@ -41,6 +41,12 @@ const HIGHLIGHT_KEYWORDS = [
 ];
 const MAX_PAGES = 4; // 채널당 최대 50×4 = 200개 업로드 스캔
 
+// 수집 윈도: 킥오프 90분 뒤 ~ 26시간 뒤 사이에 치러진 경기가 있을 때만 수집한다.
+// (하이라이트는 경기 종료 후 올라오므로 그 전엔 헛수고 / 윈도 밖이면 즉시 종료해
+//  비경기 시간·대회 종료 후 매시 크론이 자동 idle → YouTube 쿼터 절약)
+const COLLECT_FROM_MIN = 90;
+const COLLECT_TO_HOURS = 26;
+
 const yt = async (path, params) => {
   const qs = new URLSearchParams({ ...params, key: YT_KEY }).toString();
   const r = await fetch(`https://www.googleapis.com/youtube/v3/${path}?${qs}`);
@@ -112,6 +118,21 @@ async function embeddableMap(ids) {
 }
 
 async function main() {
+  // 스케줄 가드: 최근 경기(하이라이트가 올라올 시점)가 없으면 즉시 종료
+  const nowMs = Date.now();
+  const winFrom = new Date(nowMs - COLLECT_TO_HOURS * 3600_000).toISOString();
+  const winTo = new Date(nowMs - COLLECT_FROM_MIN * 60_000).toISOString();
+  const { data: recent } = await supabase
+    .from("matches")
+    .select("id")
+    .gte("kickoff_utc", winFrom)
+    .lte("kickoff_utc", winTo)
+    .limit(1);
+  if (!recent?.length) {
+    console.log(`· 최근 경기 없음(킥오프 ${COLLECT_FROM_MIN}분~${COLLECT_TO_HOURS}시간 전 구간) — 수집 건너뜀`);
+    return;
+  }
+
   const { data: teams } = await supabase.from("teams").select("id, name_ko");
   const { data: matches } = await supabase.from("matches").select("id, home_team_id, away_team_id");
   const matchesByPair = new Map();
