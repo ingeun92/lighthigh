@@ -25,6 +25,7 @@ export interface AdminHighlight {
   homeKo: string;
   awayKo: string;
   clean: boolean; // 제목에 양 팀명이 모두 등장하면 true
+  isPrimary: boolean; // 현재 맨 위 임베드되는 대표 영상인가
 }
 
 export interface AdminCandidate {
@@ -50,6 +51,7 @@ interface HighlightRow {
   channel: string | null;
   source: "youtube" | "chzzk";
   embeddable: boolean;
+  sort_order: number | null;
   match_id: number;
   match: { home: TeamName | null; away: TeamName | null } | null;
 }
@@ -73,9 +75,11 @@ export async function getAdminData(): Promise<AdminData> {
     sb
       .from("highlights")
       .select(
-        "id, title, channel, source, embeddable, match_id, match:match_id(home:home_team_id(name_ko), away:away_team_id(name_ko))"
+        "id, title, channel, source, embeddable, sort_order, match_id, match:match_id(home:home_team_id(name_ko), away:away_team_id(name_ko))"
       )
       .order("match_id")
+      .order("sort_order")
+      .order("id")
       .returns<HighlightRow[]>(),
     sb
       .from("highlight_candidates")
@@ -96,7 +100,18 @@ export async function getAdminData(): Promise<AdminData> {
     };
   });
 
-  const highlights: AdminHighlight[] = (hlRows ?? []).map((h) => {
+  // 경기별 대표 영상(첫 임베드 가능 youtube, sort_order 순) id 계산
+  const rows = hlRows ?? [];
+  const primaryIds = new Set<number>();
+  const seen = new Set<number>();
+  for (const h of rows) {
+    if (h.source === "youtube" && h.embeddable && !seen.has(h.match_id)) {
+      seen.add(h.match_id);
+      primaryIds.add(h.id);
+    }
+  }
+
+  const highlights: AdminHighlight[] = rows.map((h) => {
     const homeKo = h.match?.home?.name_ko ?? "미정";
     const awayKo = h.match?.away?.name_ko ?? "미정";
     const t = h.title ?? "";
@@ -111,6 +126,7 @@ export async function getAdminData(): Promise<AdminData> {
       homeKo,
       awayKo,
       clean,
+      isPrimary: primaryIds.has(h.id),
     };
   });
 
@@ -122,9 +138,6 @@ export async function getAdminData(): Promise<AdminData> {
     embeddable: c.embeddable,
     thumbnailUrl: (c as unknown as { thumbnail_url: string | null }).thumbnail_url,
   }));
-
-  // 의심 항목(확인 필요)을 먼저 보이도록 정렬
-  highlights.sort((a, b) => Number(a.clean) - Number(b.clean));
 
   return { matches, highlights, candidates };
 }

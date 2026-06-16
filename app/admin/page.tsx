@@ -2,6 +2,7 @@ import { getAdminData, type MatchOption } from "@/lib/admin-data";
 import {
   reassignHighlight,
   deleteHighlight,
+  featureHighlight,
   approveCandidate,
   rejectCandidate,
   addManualHighlight,
@@ -92,14 +93,19 @@ export default async function AdminPage() {
           🔧 하이라이트 교정 ({highlights.length})
         </h2>
         <p className="mb-3 text-xs text-neutral-500">
-          ⚠️ 표시는 제목에 양 팀명이 모두 없어 오매칭 의심 — 먼저 확인하세요.
+          ⚠️ 표시는 제목에 양 팀명이 모두 없어 오매칭 의심. <b className="text-blue-600">대표</b> 는 앱에서 맨 위에
+          임베드되는 영상 — 부적합하면 다른 임베드 영상에서 <b>맨 위로</b> 를 누르세요.
         </p>
         <div className="space-y-3">
           {highlights.map((h) => (
             <div
               key={h.id}
               className={`rounded-xl border bg-white p-3 ${
-                h.clean ? "border-neutral-200" : "border-amber-300 bg-amber-50/40"
+                h.isPrimary
+                  ? "border-blue-300 bg-blue-50/40"
+                  : h.clean
+                    ? "border-neutral-200"
+                    : "border-amber-300 bg-amber-50/40"
               }`}
             >
               <div className="mb-2 flex items-start justify-between gap-2">
@@ -107,7 +113,12 @@ export default async function AdminPage() {
                   {!h.clean && <span className="mr-1 text-amber-600">⚠️</span>}
                   <span className="break-words">{h.title}</span>
                 </p>
-                <span className="shrink-0 text-xs text-neutral-400">
+                <span className="flex shrink-0 items-center gap-1 text-xs text-neutral-400">
+                  {h.isPrimary && (
+                    <span className="rounded bg-blue-600 px-1.5 py-0.5 text-[0.65rem] font-bold text-white">
+                      대표
+                    </span>
+                  )}
                   {h.source === "chzzk" ? "치지직" : "YT"}
                   {h.embeddable ? "·임베드" : ""}
                 </span>
@@ -115,16 +126,25 @@ export default async function AdminPage() {
               <p className="mb-2 text-xs text-neutral-500">
                 현재 연결: <b>{h.homeKo} vs {h.awayKo}</b> · {h.channel}
               </p>
-              <form action={reassignHighlight} className="flex items-center gap-2">
-                <input type="hidden" name="id" value={h.id} />
-                <select name="matchId" className={selectCls} defaultValue={h.matchId}>
-                  <MatchOptions matches={matches} />
-                </select>
-                <button className={`${btn} bg-neutral-900 text-white`}>저장</button>
-                <button formAction={deleteHighlight} className={`${btn} bg-red-50 text-red-600`}>
-                  삭제
-                </button>
-              </form>
+              <div className="flex items-center gap-2">
+                <form action={reassignHighlight} className="flex flex-1 items-center gap-2">
+                  <input type="hidden" name="id" value={h.id} />
+                  <select name="matchId" className={selectCls} defaultValue={h.matchId}>
+                    <MatchOptions matches={matches} />
+                  </select>
+                  <button className={`${btn} bg-neutral-900 text-white`}>저장</button>
+                </form>
+                {h.source === "youtube" && h.embeddable && !h.isPrimary && (
+                  <form action={featureHighlight}>
+                    <input type="hidden" name="id" value={h.id} />
+                    <button className={`${btn} bg-blue-600 text-white`}>맨 위로</button>
+                  </form>
+                )}
+                <form action={deleteHighlight}>
+                  <input type="hidden" name="id" value={h.id} />
+                  <button className={`${btn} bg-red-50 text-red-600`}>삭제</button>
+                </form>
+              </div>
             </div>
           ))}
         </div>

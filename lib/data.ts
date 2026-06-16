@@ -81,6 +81,9 @@ export async function getMatches(): Promise<Match[]> {
        highlights ( id, source, url, video_id, title, channel, embeddable, thumbnail_url )`
     )
     .order("kickoff_utc", { ascending: true })
+    // 대표 영상(맨 위 임베드)은 sort_order 가 가장 낮은 것 → 관리자가 지정 가능
+    .order("sort_order", { referencedTable: "highlights", ascending: true })
+    .order("id", { referencedTable: "highlights", ascending: true })
     .returns<MatchRow[]>();
 
   if (error) {

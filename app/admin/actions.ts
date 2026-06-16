@@ -54,6 +54,22 @@ export async function deleteHighlight(formData: FormData) {
   refresh();
 }
 
+// 이 하이라이트를 '대표(맨 위 임베드)' 로 지정 — 같은 경기 내 최저 sort_order 보다 낮게
+export async function featureHighlight(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  const sb = getAdminClient();
+  const { data: hl } = await sb.from("highlights").select("match_id").eq("id", id).single();
+  if (!hl) return;
+  const { data: rows } = await sb
+    .from("highlights")
+    .select("sort_order")
+    .eq("match_id", hl.match_id);
+  const min = Math.min(0, ...(rows ?? []).map((r) => r.sort_order ?? 0));
+  await sb.from("highlights").update({ sort_order: min - 1 }).eq("id", id);
+  refresh();
+}
+
 // ── 후보 큐 ───────────────────────────────────────────
 export async function approveCandidate(formData: FormData) {
   const id = Number(formData.get("id"));

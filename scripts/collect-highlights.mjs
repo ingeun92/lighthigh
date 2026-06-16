@@ -164,7 +164,10 @@ async function main() {
   }
 
   if (highlightRows.length) {
-    const { error } = await supabase.from("highlights").upsert(highlightRows, { onConflict: "match_id,source,video_id" });
+    // ignoreDuplicates: 기존 행은 건드리지 않음(관리자가 지정한 sort_order='대표' 보존), 신규만 삽입
+    const { error } = await supabase
+      .from("highlights")
+      .upsert(highlightRows, { onConflict: "match_id,source,video_id", ignoreDuplicates: true });
     if (error) { console.error("✗ highlights upsert 실패:", error.message); process.exit(1); }
   }
   if (candidateRows.length) {
