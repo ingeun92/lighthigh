@@ -54,7 +54,11 @@ export default function ScheduleList({
         const key = visible?.target.getAttribute("data-key");
         if (key) {
           setActiveKey(key);
-          cellRefs.current[key]?.scrollIntoView({ inline: "center", block: "nearest" });
+          cellRefs.current[key]?.scrollIntoView({
+            inline: "center",
+            block: "nearest",
+            behavior: "smooth",
+          });
         }
       },
       { rootMargin: "-40% 0px -55% 0px" }
