@@ -27,13 +27,16 @@ function FlagImg({ team }: { team: Team }) {
 export default function MatchCard({
   match,
   hideSpoilers,
+  revealed,
+  onReveal,
   onOpenHighlights,
 }: {
   match: Match;
   hideSpoilers: boolean;
+  revealed: boolean;
+  onReveal: () => void;
   onOpenHighlights: (m: Match) => void;
 }) {
-  const [revealed, setRevealed] = useState(false);
   const round = STAGE_LABEL[match.stage] ?? match.stage;
   const isFinished = match.status === "finished";
   const isLive = match.status === "live";
@@ -88,7 +91,7 @@ export default function MatchCard({
               </div>
               {!showScore && (
                 <button
-                  onClick={() => setRevealed(true)}
+                  onClick={onReveal}
                   aria-label="결과 보기"
                   className="absolute inset-0 grid place-items-center"
                 >

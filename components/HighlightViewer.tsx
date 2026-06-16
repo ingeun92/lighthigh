@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { Match, Highlight, Team } from "@/lib/types";
 import { sortHighlights, primaryEmbeddable, youtubeEmbedUrl } from "@/lib/highlights";
 import { flagSrc } from "@/lib/countries";
@@ -25,13 +25,17 @@ function FlagMini({ team }: { team: Team }) {
 export default function HighlightViewer({
   match,
   hideScore,
+  revealed,
+  onReveal,
   onClose,
 }: {
   match: Match;
   hideScore: boolean;
+  revealed: boolean;
+  onReveal: () => void;
   onClose: () => void;
 }) {
-  const [revealed, setRevealed] = useState(!hideScore);
+  const showScore = !hideScore || revealed;
 
   // 안드로이드 뒤로가기로 닫히도록 history state push
   useEffect(() => {
@@ -70,13 +74,13 @@ export default function HighlightViewer({
           <p className="flex min-w-0 items-center gap-2 text-sm font-bold sm:text-base">
             <FlagMini team={match.home} />
             <span className="truncate">{match.home.nameKo}</span>
-            {revealed ? (
+            {showScore ? (
               <span className="scoreline shrink-0 text-base text-accent sm:text-lg">
                 {match.homeScore} : {match.awayScore}
               </span>
             ) : (
               <button
-                onClick={() => setRevealed(true)}
+                onClick={onReveal}
                 className="shrink-0 whitespace-nowrap rounded-full bg-ink/80 px-2.5 py-1 text-[0.65rem] font-bold text-white"
               >
                 결과 보기

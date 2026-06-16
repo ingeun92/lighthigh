@@ -26,6 +26,8 @@ export default function ScheduleList({
   const [active, setActive] = useState<Match | null>(null);
   const [activeKey, setActiveKey] = useState<string>(() => nearestGroupKey(groups, nowIso) ?? "");
   const [hideSpoilers, setHideSpoilers] = useState(true);
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(() => new Set());
+  const reveal = (id: string) => setRevealedIds((prev) => new Set(prev).add(id));
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const cellRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const stripRef = useRef<HTMLDivElement | null>(null);
@@ -185,6 +187,8 @@ export default function ScheduleList({
                   key={m.id}
                   match={m}
                   hideSpoilers={hideSpoilers}
+                  revealed={revealedIds.has(m.id)}
+                  onReveal={() => reveal(m.id)}
                   onOpenHighlights={setActive}
                 />
               ))}
@@ -197,6 +201,8 @@ export default function ScheduleList({
         <HighlightViewer
           match={active}
           hideScore={hideSpoilers}
+          revealed={revealedIds.has(active.id)}
+          onReveal={() => reveal(active.id)}
           onClose={() => setActive(null)}
         />
       )}
