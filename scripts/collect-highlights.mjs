@@ -24,10 +24,21 @@ const supabase = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: fals
 // 2026 월드컵 하이라이트 게시 확인된 공식 채널 (search 발굴 결과)
 const CHANNELS = [
   { name: "JTBC Sports", handle: "JTBC_sports" },
+  { name: "KBS 올스", channelId: "UCDIB1DOwPPe58M2fHPyVVDA" },
   { name: "KBS News", channelId: "UCcQTRi69dsVYHN3exePtZ1A" },
   { name: "JTBC News", channelId: "UCsU-I-vHLiaMfV_ceaYz5rQ" },
 ];
-const HIGHLIGHT_KEYWORDS = ["하이라이트", "골 장면", "골장면", "풀타임", "주요장면"];
+// 요약 하이라이트 위주(올스의 "[3분 HL]"·"[골모음]" 포함). 양 팀명 매칭이 품질을 보장한다.
+const HIGHLIGHT_KEYWORDS = [
+  "하이라이트",
+  "highlight",
+  "골모음",
+  "골 장면",
+  "골장면",
+  "주요장면",
+  "풀타임",
+  "hl",
+];
 const MAX_PAGES = 4; // 채널당 최대 50×4 = 200개 업로드 스캔
 
 const yt = async (path, params) => {
@@ -82,8 +93,12 @@ function findMatch(title, teams, matchesByPair) {
   return null;
 }
 
-const sortRank = (title) =>
-  /3분 하이라이트|풀\s*하이라이트|풀타임/.test(title) ? 0 : /골\s*장면/.test(title) ? 1 : 2;
+const sortRank = (title) => {
+  const t = title.toLowerCase();
+  if (/3분\s*(하이라이트|hl)|풀\s*하이라이트|풀타임/.test(t)) return 0;
+  if (/골\s*장면|골모음/.test(t)) return 1;
+  return 2;
+};
 
 const chunk = (arr, n) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
 

@@ -56,7 +56,7 @@ export default function HighlightViewer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-ink/45 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6"
+      className="fixed inset-0 z-50 flex flex-col bg-ink/55 sm:items-center sm:justify-center sm:p-6"
       onClick={close}
       role="dialog"
       aria-modal="true"

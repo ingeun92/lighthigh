@@ -65,7 +65,7 @@ export default function ScheduleList({
   const jump = (key: string) => {
     setActiveKey(key);
     lockRef.current = true;
-    cellRefs.current[key]?.scrollIntoView({ inline: "center", block: "nearest" });
+    cellRefs.current[key]?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
     sectionRefs.current[key]?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => {
       lockRef.current = false;
