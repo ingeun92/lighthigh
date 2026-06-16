@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "월드컵 경기 일정과 하이라이트를 한 곳에서.",
     start_url: "/",
     display: "standalone",
-    background_color: "#fafafa",
-    theme_color: "#0a0a0a",
+    background_color: "#F0EEE9",
+    theme_color: "#F0EEE9",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
     ],

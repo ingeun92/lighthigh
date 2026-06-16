@@ -1,19 +1,18 @@
+@import url("https://cdn.jsdelivr.net/gh/moonspam/NanumSquare@2.0/nanumsquare.css");
 @import "tailwindcss";
 
-/* ── lighthigh "Floodlit Matchday" 토큰 ── */
+/* ── lighthigh — Cloud Dancer (PANTONE 2026) 라이트 팔레트 ── */
 @theme {
-  --color-pitch: #0c1322; /* 야간 경기장 하늘 (블랙 회피) */
-  --color-stand: #141c30; /* 카드 표면 */
-  --color-stand2: #1b2540; /* 들린 표면 */
-  --color-flood: #ffcc4d; /* 조명등 앰버 (시그니처) */
-  --color-flood-soft: #ffe28a;
-  --color-chalk: #eaeff8; /* 라인 마킹 화이트 */
-  --color-fog: #7e8aa6; /* 흐린 텍스트 */
-  --color-live: #ff5466; /* 진행중 신호 (절제) */
-  --color-line: rgba(255, 255, 255, 0.08);
+  --color-canvas: #f0eee9; /* Cloud Dancer — 따뜻한 화이트 캔버스 */
+  --color-card: #ffffff;
+  --color-ink: #211f1b; /* 따뜻한 근접 블랙 (텍스트) */
+  --color-muted: #8c877d; /* 따뜻한 회색 */
+  --color-line: rgba(33, 31, 27, 0.1);
+  --color-flame: #e8542b; /* 단일 악센트 — 매치데이 플레임 코랄 */
+  --color-flame-soft: #fbe7dd;
+  --color-live: #e0322b;
 
-  --font-display: var(--font-archivo);
-  --font-sans: var(--font-plex-kr);
+  --font-sans: "NanumSquareAc", "NanumSquare", sans-serif;
 }
 
 html {
@@ -21,63 +20,39 @@ html {
 }
 
 body {
-  font-family: var(--font-plex-kr), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "NanumSquareAc", "NanumSquare", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
-/* 다크 테마 키보드 포커스 가시성 */
+/* 키보드 포커스 가시성 */
 :focus-visible {
-  outline: 2px solid var(--color-flood);
+  outline: 2px solid var(--color-flame);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-/* 방송 자막 라벨 (eyebrow) */
+/* 작은 라벨 (라운드/상태) */
 .eyebrow {
-  font-family: var(--font-display), sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-weight: 700;
-  font-size: 0.625rem;
+  font-weight: 800;
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
 }
 
-/* 점등된 전광판 숫자 */
+/* 전광판 스코어 — 탭ular */
 .scoreline {
-  font-family: var(--font-display), sans-serif;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
 
-/* 조명 켜진 하이라이트 바 */
-.lit {
+/* 부드러운 카드 그림자 (라이트 테마) */
+.card-soft {
   box-shadow:
-    0 0 0 1px rgba(255, 204, 77, 0.35),
-    0 8px 30px -8px rgba(255, 204, 77, 0.55);
+    0 1px 2px rgba(33, 31, 27, 0.04),
+    0 8px 20px -12px rgba(33, 31, 27, 0.18);
 }
 
-/* 시그니처: 로드 시 조명 warm-up (1회) */
-.flood {
-  background: radial-gradient(
-    115% 80% at 50% -12%,
-    rgba(255, 204, 77, 0.26),
-    rgba(255, 204, 77, 0.05) 42%,
-    transparent 66%
-  );
-}
-@keyframes flood-warm {
-  0% {
-    opacity: 0;
-    filter: blur(14px);
-  }
-  100% {
-    opacity: 1;
-    filter: blur(0);
-  }
-}
-.flood-warm {
-  animation: flood-warm 0.85s ease-out both;
-}
-
+/* 진행중 신호 */
 @keyframes live-pulse {
   0%,
   100% {
@@ -85,8 +60,8 @@ body {
     transform: scale(1);
   }
   50% {
-    opacity: 0.45;
-    transform: scale(0.82);
+    opacity: 0.4;
+    transform: scale(0.8);
   }
 }
 .live-dot {
@@ -94,10 +69,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .flood-warm,
   .live-dot {
     animation: none !important;
-    filter: none;
-    opacity: 1;
   }
 }

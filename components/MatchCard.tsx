@@ -1,37 +1,36 @@
 "use client";
 
-import type { Match } from "@/lib/types";
+import { useState } from "react";
+import type { Match, Team } from "@/lib/types";
 import { STAGE_LABEL } from "@/lib/types";
 import { kstTime } from "@/lib/format";
+import { flagSrc } from "@/lib/countries";
 
-function TeamRow({
-  flag,
-  name,
-  score,
-  tone,
-}: {
-  flag: string;
-  name: string;
-  score?: number;
-  tone: "win" | "lose" | "even" | "none";
-}) {
-  const scoreColor =
-    tone === "win" ? "text-chalk" : tone === "lose" ? "text-fog" : "text-chalk";
+function FlagImg({ team }: { team: Team }) {
+  const [err, setErr] = useState(false);
+  const src = flagSrc(team.countryCode);
+  if (!src || err) {
+    return <span className="grid h-11 w-[3.75rem] place-items-center text-[2rem]">{team.flag}</span>;
+  }
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="flex min-w-0 items-center gap-2.5">
-        <span className="text-[1.35rem] leading-none">{flag}</span>
-        <span
-          className={`truncate text-[0.95rem] ${
-            tone === "lose" ? "font-medium text-fog" : "font-semibold text-chalk"
-          }`}
-        >
-          {name}
-        </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={`${team.nameKo} 국기`}
+      onError={() => setErr(true)}
+      loading="lazy"
+      className="h-11 w-[3.75rem] rounded-lg object-cover shadow-sm ring-1 ring-line"
+    />
+  );
+}
+
+function TeamCol({ team }: { team: Team }) {
+  return (
+    <div className="flex min-w-0 flex-col items-center gap-2">
+      <FlagImg team={team} />
+      <span className="break-keep text-center text-[0.82rem] font-bold leading-tight text-ink">
+        {team.nameKo}
       </span>
-      {tone !== "none" && (
-        <span className={`scoreline text-2xl ${scoreColor}`}>{score ?? 0}</span>
-      )}
     </div>
   );
 }
@@ -49,64 +48,66 @@ export default function MatchCard({
   const played = isFinished || isLive;
   const hasHighlights = isFinished && match.highlights.length > 0;
 
-  const tone = (a?: number, b?: number): "win" | "lose" | "even" | "none" => {
-    if (!played || a == null || b == null) return "none";
-    if (a === b) return "even";
-    return a > b ? "win" : "lose";
-  };
+  const hs = match.homeScore;
+  const as = match.awayScore;
+  const homeColor = played && hs != null && as != null && hs < as ? "text-muted" : "text-ink";
+  const awayColor = played && hs != null && as != null && as < hs ? "text-muted" : "text-ink";
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-stand">
-      <div className="p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="eyebrow text-fog">
-            {round}
-            {match.groupLabel ? ` · ${match.groupLabel}` : ""}
+    <div className="card-soft rounded-2xl border border-line bg-card p-4">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="eyebrow text-muted">
+          {round}
+          {match.groupLabel ? ` · ${match.groupLabel}` : ""}
+        </span>
+        {isLive ? (
+          <span className="flex items-center gap-1.5 text-[0.7rem] font-extrabold text-live">
+            <span className="live-dot h-1.5 w-1.5 rounded-full bg-live" />
+            LIVE
           </span>
-          {isLive ? (
-            <span className="flex items-center gap-1.5 text-[0.7rem] font-bold text-live">
-              <span className="live-dot h-1.5 w-1.5 rounded-full bg-live" />
-              LIVE
-            </span>
-          ) : isFinished ? (
-            <span className="text-[0.7rem] font-semibold text-fog">종료</span>
+        ) : isFinished ? (
+          <span className="text-[0.7rem] font-bold text-muted">종료</span>
+        ) : (
+          <span className="text-[0.7rem] font-bold text-muted">예정</span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1">
+        <TeamCol team={match.home} />
+
+        <div className="px-1 text-center">
+          {played && hs != null && as != null ? (
+            <div className="scoreline text-[1.9rem] leading-none">
+              <span className={homeColor}>{hs}</span>
+              <span className="mx-1.5 text-muted">:</span>
+              <span className={awayColor}>{as}</span>
+            </div>
           ) : (
-            <span className="scoreline text-sm text-chalk">
-              {kstTime(match.kickoffUtc)}
-              <span className="ml-1 text-[0.65rem] font-medium text-fog">KST</span>
-            </span>
+            <div>
+              <div className="scoreline text-lg leading-none text-ink">
+                {kstTime(match.kickoffUtc)}
+              </div>
+              <div className="mt-1 text-[0.6rem] font-bold text-muted">KST</div>
+            </div>
           )}
         </div>
 
-        <div className="space-y-2.5">
-          <TeamRow
-            flag={match.home.flag}
-            name={match.home.nameKo}
-            score={match.homeScore}
-            tone={tone(match.homeScore, match.awayScore)}
-          />
-          <TeamRow
-            flag={match.away.flag}
-            name={match.away.nameKo}
-            score={match.awayScore}
-            tone={tone(match.awayScore, match.homeScore)}
-          />
-        </div>
+        <TeamCol team={match.away} />
       </div>
 
       {isFinished &&
         (hasHighlights ? (
           <button
             onClick={() => onOpenHighlights(match)}
-            className="lit flex w-full items-center justify-center gap-2 bg-flood py-3 text-sm font-bold text-pitch transition-transform active:scale-[0.99]"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-flame py-3 text-sm font-extrabold text-white transition-transform active:scale-[0.99]"
           >
             <span aria-hidden>▸</span> 하이라이트 보기
-            <span className="rounded-full bg-pitch/15 px-1.5 py-0.5 text-[0.7rem] font-bold tabular-nums">
+            <span className="scoreline rounded-full bg-white/25 px-1.5 py-0.5 text-[0.7rem]">
               {match.highlights.length}
             </span>
           </button>
         ) : (
-          <div className="border-t border-line py-2.5 text-center text-xs font-medium text-fog">
+          <div className="mt-3 border-t border-line pt-2.5 text-center text-xs font-bold text-muted">
             하이라이트 준비 중
           </div>
         ))}

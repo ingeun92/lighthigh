@@ -35,6 +35,24 @@ export function kstTime(iso: string): string {
   }).format(new Date(iso));
 }
 
+export function kstDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone: KST, day: "numeric" }).format(
+    new Date(iso)
+  );
+}
+
+export function kstWeekday(iso: string): string {
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: KST, weekday: "short" }).format(
+    new Date(iso)
+  );
+}
+
+export function kstMonth(iso: string): string {
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: KST, month: "long" }).format(
+    new Date(iso)
+  );
+}
+
 export function kstChip(iso: string): string {
   // '6.16 월' (날짜 칩용 짧은 라벨)
   const md = new Intl.DateTimeFormat("ko-KR", {

@@ -14,29 +14,21 @@ export default async function Home() {
   const liveCount = matches.filter((m) => m.status === "live").length;
 
   return (
-    <div className="relative mx-auto min-h-full w-full max-w-lg px-4">
-      {/* 점등 히어로: 조명이 켜지는 한 번의 순간 (브랜드 모먼트) */}
-      <header className="relative -mx-4 overflow-hidden px-4 pb-5 pt-8">
-        <div
-          aria-hidden
-          className="flood flood-warm pointer-events-none absolute inset-x-0 -top-12 h-52"
-        />
-        <p className="eyebrow text-flood/90">2026 FIFA WORLD CUP</p>
-        <h1 className="mt-1.5 font-display text-[2.7rem] font-extrabold leading-none tracking-tight">
-          light
-          <span className="text-flood [text-shadow:0_0_24px_rgba(255,204,77,0.45)]">high</span>
+    <div className="mx-auto min-h-full w-full max-w-lg px-5">
+      <header className="pb-4 pt-9">
+        <p className="eyebrow text-flame">2026 FIFA 월드컵</p>
+        <h1 className="mt-2 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight text-ink">
+          light<span className="text-flame">high</span>
         </h1>
-        <p className="mt-2.5 flex items-center gap-2 text-sm text-fog">
-          <span>월드컵 하이라이트, 일정표에서 바로</span>
-        </p>
-        <p className="mt-1 text-sm text-fog">
+        <p className="mt-2 text-[0.95rem] text-muted">월드컵 하이라이트, 일정표에서 바로</p>
+        <p className="mt-4 text-sm text-muted">
           {todayCount > 0 ? (
             <>
-              오늘 <b className="font-semibold text-chalk">{todayCount}경기</b>
+              오늘 <b className="font-extrabold text-ink">{todayCount}경기</b>
               {liveCount > 0 && (
                 <>
-                  {" · "}
-                  <span className="inline-flex items-center gap-1.5 font-semibold text-live">
+                  {"  ·  "}
+                  <span className="inline-flex items-center gap-1.5 font-bold text-live">
                     <span className="live-dot inline-block h-1.5 w-1.5 rounded-full bg-live" />
                     지금 {liveCount}경기 진행 중
                   </span>
@@ -49,7 +41,7 @@ export default async function Home() {
         </p>
       </header>
 
-      <main className="pb-12">
+      <main className="pb-14">
         <ScheduleList matches={matches} nowIso={nowIso} />
       </main>
     </div>
