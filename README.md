@@ -1,61 +1,102 @@
 <div align="center">
 
-# lighthigh ⚽🔆
+# lighthigh ⚽
 
 **흩어진 월드컵 하이라이트를, 일정표에서 한 번의 탭으로.**
 
 2026 FIFA 월드컵 경기 일정을 모바일에서 한 눈에 보고, 하이라이트로 바로 연결합니다.
 
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-149ECA?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres-3FCF8E?logo=supabase)
+![License](https://img.shields.io/badge/License-MIT-blue)
+
 </div>
 
 ## 무엇을 해결하나
 
-한국에서 월드컵 파생영상 권한은 네이버(치지직)뿐이고, 하이라이트는 치지직·JTBC·KBS 유튜브에 흩어져 있어 매번 검색하는 "추가 사이클"이 필요합니다. lighthigh는 **일정 → 하이라이트**를 한 동작으로 잇고, 시청 후 보던 위치로 매끄럽게 복귀시킵니다.
+한국에서 월드컵 파생영상 권한은 네이버(치지직)뿐이고, 하이라이트는 **치지직·JTBC·KBS 유튜브**에 흩어져 있어 매번 검색하는 "추가 사이클"이 필요합니다. lighthigh는 **일정 → 하이라이트**를 한 동작으로 잇고, 시청 후 보던 위치로 매끄럽게 복귀시킵니다.
 
-## 핵심 기능 (MVP)
+## 핵심 기능
 
-- 📅 날짜(KST)별 경기 일정 리스트 — 라운드/조, 스코어, 상태
-- ▶️ 끝난 경기 → 하이라이트 한 번에 연결 (임베드 가능 시 인앱 재생, 아니면 외부 딥링크)
-- 🔁 외부 이동 후에도 보던 위치 그대로 (스크롤 복원)
-- 📱 모바일 우선 + PWA(홈 화면 추가)
+- 📅 **날짜별 경기 일정** — KST 기준, 달력형 날짜 스트립(좌우 화살표·스크롤), 라운드/조·국기·스코어
+- ▶️ **하이라이트 바로보기** — 임베드 가능 영상은 인앱 재생, 그 외/치지직은 외부 딥링크. 다수 하이라이트는 목록 스크롤
+- 🙈 **스포일러 가림** — 점수를 기본 블러 처리, "결과 보기"로 공개(카드·팝업 동기화), 상단 토글로 일괄 전환
+- 🔁 **매끄러운 왕복** — SPA 라우팅 + 스크롤 복원, 외부 이동 후 보던 자리로 복귀
+- 📱 **모바일 우선 + PWA** — 홈 화면 추가, "Cloud Dancer"(PANTONE 2026) 라이트 테마
+- 🛠 **관리자 페이지** — 하이라이트 오매칭 교정(경기별 접이식)·대표 영상 지정·후보 승인·수동 추가
 
 ## 기술 스택
 
-- **Next.js 16** (App Router) · React 19 · TypeScript · Tailwind v4
-- **Supabase** (Postgres) — 일정/하이라이트 저장
-- 데이터: **football-data.org**(일정/결과, 무료) · **YouTube Data API**(하이라이트 수집)
+- **Next.js 16** (App Router) · React 19 · TypeScript · Tailwind CSS v4 · NanumSquare
+- **Supabase** (Postgres + RLS) — 일정/하이라이트 저장
+- 데이터: **football-data.org**(일정/결과, 무료) · **YouTube Data API v3**(하이라이트 수집)
+
+## 아키텍처
+
+```mermaid
+flowchart LR
+  FD[football-data.org] -->|sync:matches| DB[(Supabase)]
+  YT[YouTube Data API<br/>JTBC·올스·KBS News] -->|collect:highlights<br/>자동 매칭| DB
+  DB <--> APP[Next.js PWA]
+  ADMIN[관리자 /admin] -->|교정·대표지정·승인| DB
+  APP --> U((사용자))
+```
+
+- **일정 동기화**: football-data WC 경기/결과 → `matches`/`teams` upsert
+- **하이라이트 수집**: 공식 채널 업로드 → 키워드 필터 → 제목의 팀명으로 경기 **자동 매칭** → 임베드 여부 확인 → `highlights`(매칭)/`highlight_candidates`(미매칭)
+- **반자동 운영**: 자동 수집 + 관리자 검토/교정으로 정확도 확보
 
 ## 빠른 시작
 
 ```bash
 pnpm install
-cp .env.local.example .env.local   # 키 입력
+cp .env.local.example .env.local   # 키 입력 (아래 표 참고)
 pnpm dev                            # http://localhost:3000
 ```
 
-현재 `lib/data.ts`는 목 데이터(`lib/mock-data.ts`)를 반환하므로 키 없이도 UI가 동작합니다.
+Supabase 스키마는 [`supabase/schema.sql`](supabase/schema.sql)을 SQL Editor에 붙여넣어 적용합니다.
+키가 없으면 `lib/mock-data.ts`의 목 데이터로 UI가 동작합니다.
 
-### 데이터 소스 검증
+### 환경 변수
 
-```bash
-# .env.local 에 FOOTBALL_DATA_TOKEN, YOUTUBE_API_KEY 채운 뒤
-pnpm verify:sources
-```
+| 변수 | 설명 |
+|---|---|
+| `FOOTBALL_DATA_TOKEN` | football-data.org API 토큰(일정/결과) |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 키(하이라이트 수집) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon 키(공개 읽기) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role 키(동기화·관리자 쓰기) |
+| `ADMIN_TOKEN` | `/admin` 보호용 토큰(미설정 시 로컬 무인증 접근) |
+| `APIFOOTBALL_KEY` | (선택) 라이브 스코어 전환용 |
 
-football-data.org의 2026 월드컵 응답과, KBS/JTBC 채널 하이라이트의 **임베드 가능 비율**을 측정합니다.
+### 스크립트
+
+| 명령 | 설명 |
+|---|---|
+| `pnpm dev` / `build` / `start` | 개발 / 빌드 / 프로덕션 |
+| `pnpm lint` | ESLint |
+| `pnpm verify:sources` | 데이터 소스 점검(WC 일정·임베드 가능 비율) |
+| `pnpm sync:matches` | football-data → Supabase 일정 동기화 |
+| `pnpm collect:highlights` | YouTube 하이라이트 수집·자동 매칭 |
+
+## 관리자 (`/admin`)
+
+- **하이라이트 교정** — 경기별 접이식, 오매칭 의심(⚠️) 경기만 자동 펼침
+- **대표 지정** — 앱 맨 위 임베드 영상을 "맨 위로"로 교체
+- **후보 승인 / 거부** — 자동 매칭 안 된 영상을 경기에 연결
+- **수동 추가** — 치지직/유튜브 URL을 경기에 직접 연결
+
+> `ADMIN_TOKEN`을 설정하면 `/admin/login`에서 토큰 인증을 요구합니다.
 
 ## 문서
 
 - [`docs/PRD.md`](docs/PRD.md) — 제품 요구사항
-- [`docs/wireframe.md`](docs/wireframe.md) — 모바일 와이어프레임 & 화면 흐름
-- [`supabase/schema.sql`](supabase/schema.sql) — DB 스키마
+- [`docs/wireframe.md`](docs/wireframe.md) — 모바일 와이어프레임·화면 흐름
 
-## 로드맵
+## 라이선스
 
-| 단계 | 내용 |
-|---|---|
-| ✅ Day 0 | 스캐폴딩 · 스키마 · 소스 검증 스크립트 · 홈 UI 골격(목 데이터) |
-| Day 1–2 | football-data 동기화 + 실데이터 연결 |
-| Day 3 | 하이라이트 뷰어 마감 + 관리자 매핑 |
-| Day 4 | YouTube 수집 Cron + 치지직 수동 입력 |
-| Day 5–6 | PWA·왕복 UX 다듬기 + Vercel 배포 |
+[MIT](LICENSE) © ingeun92
+
+> 영상은 재호스팅 없이 공식 출처로 **링크·임베드만** 제공합니다. YouTube/치지직 약관 및 중계권 정책을 준수하세요.
