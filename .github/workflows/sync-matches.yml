@@ -1,0 +1,38 @@
+name: sync-matches
+
+# 경기 일정·점수 동기화 (football-data.org → Supabase)
+# 월드컵 기간 점수 반영을 위해 15분마다 실행. 화면은 ISR(5분) 으로 뒤따라 갱신.
+on:
+  schedule:
+    - cron: "*/15 * * * *" # 매 15분 (UTC 기준, GitHub 부하 시 수 분 지연될 수 있음)
+  workflow_dispatch: {} # Actions 탭에서 수동 실행 가능
+
+# 직전 실행이 안 끝났으면 새 실행을 큐에 쌓지 않고 건너뜀(중복 방지)
+concurrency:
+  group: sync-matches
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24" # 네이티브 TypeScript 타입 스트리핑(.ts import) 지원
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: sync matches
+        run: node scripts/sync-matches.mjs
+        env:
+          FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

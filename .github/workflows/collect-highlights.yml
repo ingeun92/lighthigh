@@ -1,0 +1,38 @@
+name: collect-highlights
+
+# 유튜브 공식 채널 하이라이트 수집·자동매칭 (YouTube Data API → Supabase)
+# 하이라이트는 경기 종료 후 수 시간 내 올라오므로 1시간 주기면 충분(쿼터 여유).
+# 매칭 성공 → highlights / 애매 → highlight_candidates(관리자 검토).
+on:
+  schedule:
+    - cron: "0 * * * *" # 매시 정각 (UTC 기준, GitHub 부하 시 수 분 지연될 수 있음)
+  workflow_dispatch: {} # Actions 탭에서 수동 실행 가능
+
+concurrency:
+  group: collect-highlights
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: collect highlights
+        run: node scripts/collect-highlights.mjs
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
