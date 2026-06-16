@@ -84,3 +84,17 @@ select
 from matches m
 left join teams ht on ht.id = m.home_team_id
 left join teams at on at.id = m.away_team_id;
+
+-- ── RLS: 공개 읽기 전용 (쓰기는 service_role 키가 RLS 우회) ──
+alter table teams      enable row level security;
+alter table matches    enable row level security;
+alter table highlights enable row level security;
+alter table highlight_candidates enable row level security;
+
+create policy "public read teams"      on teams      for select using (true);
+create policy "public read matches"    on matches    for select using (true);
+-- 승인된 하이라이트만 공개
+create policy "public read highlights" on highlights for select using (is_approved);
+-- 후보 큐는 비공개 (관리자는 service_role 로 접근)
+
+grant select on match_list to anon, authenticated;
