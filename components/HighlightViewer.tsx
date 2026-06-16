@@ -10,15 +10,19 @@ const sourceLabel = (h: Highlight) =>
 
 function FlagMini({ team }: { team: Team }) {
   const src = flagSrc(team.countryCode);
-  if (!src) return <span className="text-base">{team.flag}</span>;
+  // 3:2 박스 + object-contain — 비율 달라도 잘리지 않고 전체가 보인다.
+  const box = "grid h-5 w-[1.875rem] shrink-0 place-items-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-line";
+  if (!src) return <span className={`${box} text-xs`}>{team.flag}</span>;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={`${team.nameKo} 국기`}
-      loading="lazy"
-      className="h-5 w-[1.75rem] shrink-0 rounded object-cover shadow-sm ring-1 ring-line"
-    />
+    <span className={box}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={`${team.nameKo} 국기`}
+        loading="lazy"
+        className="h-full w-full object-contain"
+      />
+    </span>
   );
 }
 
