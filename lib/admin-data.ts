@@ -25,6 +25,8 @@ export interface AdminHighlight {
   homeKo: string;
   awayKo: string;
   clean: boolean; // 제목에 양 팀명이 모두 등장하면 true
+  reviewed: boolean; // 관리자가 경고를 확인·해결 처리했는가
+  needsReview: boolean; // 경고 표시 대상 (!clean && !reviewed)
   isPrimary: boolean; // 현재 맨 위 임베드되는 대표 영상인가
 }
 
@@ -52,6 +54,7 @@ interface HighlightRow {
   source: "youtube" | "chzzk";
   embeddable: boolean;
   sort_order: number | null;
+  reviewed: boolean | null;
   match_id: number;
   match: { home: TeamName | null; away: TeamName | null } | null;
 }
@@ -74,22 +77,27 @@ export interface AdminData {
 export async function getAdminData(): Promise<AdminData> {
   const sb = getAdminClient();
 
-  const [{ data: matchRows }, { data: hlRows }, { data: candRows }] = await Promise.all([
+  const HL_SELECT =
+    "id, title, channel, source, embeddable, sort_order, match_id, match:match_id(home:home_team_id(name_ko), away:away_team_id(name_ko))";
+
+  // reviewed 컬럼이 아직 없을 수 있어 폴백 처리
+  const fetchHighlights = async (): Promise<HighlightRow[]> => {
+    const q = (sel: string) =>
+      sb.from("highlights").select(sel).order("match_id").order("sort_order").order("id");
+    const withRev = await q("reviewed, " + HL_SELECT);
+    if (!withRev.error) return (withRev.data ?? []) as unknown as HighlightRow[];
+    const base = await q(HL_SELECT);
+    return ((base.data ?? []) as unknown as HighlightRow[]).map((h) => ({ ...h, reviewed: false }));
+  };
+
+  const [{ data: matchRows }, hlRows, { data: candRows }] = await Promise.all([
     sb
       .from("matches")
       .select("id, kickoff_utc, group_label, home:home_team_id(name_ko), away:away_team_id(name_ko)")
       .in("status", ["finished", "live"]) // 치러진 경기만 매핑 대상
       .order("kickoff_utc")
       .returns<MatchRow[]>(),
-    sb
-      .from("highlights")
-      .select(
-        "id, title, channel, source, embeddable, sort_order, match_id, match:match_id(home:home_team_id(name_ko), away:away_team_id(name_ko))"
-      )
-      .order("match_id")
-      .order("sort_order")
-      .order("id")
-      .returns<HighlightRow[]>(),
+    fetchHighlights(),
     sb
       .from("highlight_candidates")
       .select("id, title, channel, video_id, embeddable, thumbnail_url")
@@ -110,7 +118,7 @@ export async function getAdminData(): Promise<AdminData> {
   });
 
   // 경기별 대표 영상(첫 임베드 가능 youtube, sort_order 순) id 계산
-  const rows = hlRows ?? [];
+  const rows = hlRows;
   const primaryIds = new Set<number>();
   const seen = new Set<number>();
   for (const h of rows) {
@@ -125,6 +133,7 @@ export async function getAdminData(): Promise<AdminData> {
     const awayKo = h.match?.away?.name_ko ?? "미정";
     const t = h.title ?? "";
     const clean = t.includes(homeKo) && t.includes(awayKo);
+    const reviewed = h.reviewed ?? false;
     return {
       id: h.id,
       title: h.title,
@@ -135,6 +144,8 @@ export async function getAdminData(): Promise<AdminData> {
       homeKo,
       awayKo,
       clean,
+      reviewed,
+      needsReview: !clean && !reviewed,
       isPrimary: primaryIds.has(h.id),
     };
   });
@@ -164,7 +175,7 @@ export async function getAdminData(): Promise<AdminData> {
       groupMap.set(h.matchId, g);
     }
     g.items.push(h);
-    if (!h.clean) g.mismatchCount += 1;
+    if (h.needsReview) g.mismatchCount += 1;
     if (h.isPrimary) g.hasPrimary = true;
   }
   // 교정 필요한 경기(오매칭 의심)를 먼저

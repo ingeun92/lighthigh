@@ -70,6 +70,23 @@ export async function featureHighlight(formData: FormData) {
   refresh();
 }
 
+// 오매칭 경고를 '확인·해결' 처리 / 되돌리기
+export async function resolveHighlight(formData: FormData) {
+  const id = String(formData.get("id"));
+  if (!id) return;
+  const sb = getAdminClient();
+  await sb.from("highlights").update({ reviewed: true }).eq("id", id);
+  refresh();
+}
+
+export async function unresolveHighlight(formData: FormData) {
+  const id = String(formData.get("id"));
+  if (!id) return;
+  const sb = getAdminClient();
+  await sb.from("highlights").update({ reviewed: false }).eq("id", id);
+  refresh();
+}
+
 // ── 후보 큐 ───────────────────────────────────────────
 export async function approveCandidate(formData: FormData) {
   const id = Number(formData.get("id"));

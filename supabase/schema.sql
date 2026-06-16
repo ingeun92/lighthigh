@@ -47,6 +47,7 @@ create table if not exists highlights (
   thumbnail_url text,
   published_at  timestamptz,
   is_approved   boolean not null default true,
+  reviewed      boolean not null default false, -- 관리자가 오매칭 경고를 확인·해결 처리했는가
   sort_order    int not null default 0,      -- 노출 우선순위 (embed 가능 youtube 우선)
   created_at    timestamptz not null default now(),
   unique (match_id, source, video_id)

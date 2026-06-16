@@ -3,6 +3,8 @@ import {
   reassignHighlight,
   deleteHighlight,
   featureHighlight,
+  resolveHighlight,
+  unresolveHighlight,
   approveCandidate,
   rejectCandidate,
   addManualHighlight,
@@ -32,16 +34,16 @@ function HighlightItem({ h, matches }: { h: AdminHighlight; matches: MatchOption
   return (
     <div
       className={`rounded-lg border p-3 ${
-        h.isPrimary
-          ? "border-blue-300 bg-blue-50/40"
-          : h.clean
-            ? "border-neutral-200"
-            : "border-amber-300 bg-amber-50/40"
+        h.needsReview
+          ? "border-amber-300 bg-amber-50/40"
+          : h.isPrimary
+            ? "border-blue-300 bg-blue-50/40"
+            : "border-neutral-200"
       }`}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <p className="min-w-0 text-sm font-medium">
-          {!h.clean && <span className="mr-1 text-amber-600">⚠️</span>}
+          {h.needsReview && <span className="mr-1 text-amber-600">⚠️</span>}
           <span className="break-words">{h.title}</span>
         </p>
         <span className="flex shrink-0 items-center gap-1 text-xs text-neutral-400">
@@ -55,6 +57,21 @@ function HighlightItem({ h, matches }: { h: AdminHighlight; matches: MatchOption
         </span>
       </div>
       <p className="mb-2 text-xs text-neutral-400">{h.channel}</p>
+      {h.needsReview && (
+        <form action={resolveHighlight} className="mb-2">
+          <input type="hidden" name="id" value={h.id} />
+          <button className={`${btn} w-full bg-amber-500 text-white`}>
+            ✓ 경고 해결 (확인 완료)
+          </button>
+        </form>
+      )}
+      {!h.clean && h.reviewed && (
+        <form action={unresolveHighlight} className="mb-2 flex items-center gap-1 text-xs text-neutral-400">
+          <input type="hidden" name="id" value={h.id} />
+          <span>✓ 확인됨</span>·
+          <button className="underline">경고 되돌리기</button>
+        </form>
+      )}
       <div className="flex items-center gap-2">
         <form action={reassignHighlight} className="flex flex-1 items-center gap-2">
           <input type="hidden" name="id" value={h.id} />
@@ -139,14 +156,14 @@ export default async function AdminPage() {
           🔧 하이라이트 교정 — 경기별 ({highlightGroups.length}경기)
         </h2>
         <p className="mb-3 text-xs text-neutral-500">
-          ⚠️ 있는 경기는 자동으로 펼쳐집니다. <b className="text-blue-600">대표</b> 는 앱 맨 위 임베드 영상 —
-          부적합하면 다른 임베드 영상에서 <b>맨 위로</b>.
+          기본은 접힘 — 요약줄의 <b className="text-amber-600">⚠️</b> 개수를 보고 필요한 경기만 펼치세요. 확인을
+          마치면 <b>경고 해결</b> 로 표시를 없앨 수 있습니다. <b className="text-blue-600">대표</b> 는 앱 맨 위
+          임베드 영상 — 부적합하면 다른 임베드 영상에서 <b>맨 위로</b>.
         </p>
         <div className="space-y-2">
           {highlightGroups.map((g) => (
             <details
               key={g.matchId}
-              open={g.mismatchCount > 0}
               className="group rounded-xl border border-neutral-200 bg-white"
             >
               <summary className="flex cursor-pointer list-none items-center gap-2 p-3 [&::-webkit-details-marker]:hidden">
