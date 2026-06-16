@@ -26,11 +26,14 @@ function FlagImg({ team }: { team: Team }) {
 
 export default function MatchCard({
   match,
+  hideSpoilers,
   onOpenHighlights,
 }: {
   match: Match;
+  hideSpoilers: boolean;
   onOpenHighlights: (m: Match) => void;
 }) {
+  const [revealed, setRevealed] = useState(false);
   const round = STAGE_LABEL[match.stage] ?? match.stage;
   const isFinished = match.status === "finished";
   const isLive = match.status === "live";
@@ -40,6 +43,7 @@ export default function MatchCard({
   const hs = match.homeScore;
   const as = match.awayScore;
   const hasScore = played && hs != null && as != null;
+  const showScore = hasScore && (!hideSpoilers || revealed);
   const homeColor = hasScore && hs! < as! ? "text-muted" : "text-ink";
   const awayColor = hasScore && as! < hs! ? "text-muted" : "text-ink";
 
@@ -69,13 +73,31 @@ export default function MatchCard({
         <div className="flex justify-center">
           <FlagImg team={match.home} />
         </div>
-        <div className="px-1 text-center">
+        <div className="relative px-1 text-center">
           {hasScore ? (
-            <div className="scoreline text-[1.9rem] leading-none">
-              <span className={homeColor}>{hs}</span>
-              <span className="mx-1.5 text-muted">:</span>
-              <span className={awayColor}>{as}</span>
-            </div>
+            <>
+              <div
+                className={`scoreline text-[1.9rem] leading-none ${
+                  showScore ? "" : "select-none blur-[7px]"
+                }`}
+                aria-hidden={!showScore}
+              >
+                <span className={homeColor}>{hs}</span>
+                <span className="mx-1.5 text-muted">:</span>
+                <span className={awayColor}>{as}</span>
+              </div>
+              {!showScore && (
+                <button
+                  onClick={() => setRevealed(true)}
+                  aria-label="결과 보기"
+                  className="absolute inset-0 grid place-items-center"
+                >
+                  <span className="whitespace-nowrap rounded-full bg-ink/80 px-2.5 py-1 text-[0.6rem] font-bold text-white">
+                    결과 보기
+                  </span>
+                </button>
+              )}
+            </>
           ) : (
             <div className="scoreline text-lg leading-none text-ink">{kstTime(match.kickoffUtc)}</div>
           )}

@@ -25,9 +25,11 @@ export default function ScheduleList({
 
   const [active, setActive] = useState<Match | null>(null);
   const [activeKey, setActiveKey] = useState<string>(() => nearestGroupKey(groups, nowIso) ?? "");
+  const [hideSpoilers, setHideSpoilers] = useState(true);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const cellRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const stripRef = useRef<HTMLDivElement | null>(null);
+  const lockRef = useRef(false); // 클릭 직후 관찰자 갱신 잠금 (음영 튐 방지)
 
   const scrollStrip = (dir: 1 | -1) =>
     stripRef.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
@@ -39,10 +41,11 @@ export default function ScheduleList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 스크롤에 따라 활성 날짜 추적 + 활성 셀을 스트립 중앙으로
+  // 스크롤에 따라 활성 날짜 추적 (클릭 직후 잠금 구간은 무시)
   useEffect(() => {
     const obs = new IntersectionObserver(
       (entries) => {
+        if (lockRef.current) return;
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
@@ -58,8 +61,16 @@ export default function ScheduleList({
     return () => obs.disconnect();
   }, []);
 
-  const jump = (key: string) =>
+  // 날짜 클릭: 즉시 음영 변경 + 잠금 후 부드럽게 스크롤
+  const jump = (key: string) => {
+    setActiveKey(key);
+    lockRef.current = true;
+    cellRefs.current[key]?.scrollIntoView({ inline: "center", block: "nearest" });
     sectionRefs.current[key]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      lockRef.current = false;
+    }, 800);
+  };
 
   const activeMonth = useMemo(() => {
     const g = groups.find((x) => x.key === activeKey) ?? groups[0];
@@ -70,29 +81,36 @@ export default function ScheduleList({
     <>
       {/* 달력형 날짜 스트립 */}
       <div className="sticky top-0 z-20 -mx-5 bg-canvas/95 px-5 pb-2 pt-2 backdrop-blur">
-        <p className="mb-1.5 text-xs font-bold text-muted">{activeMonth}</p>
-        <div className="relative">
-          {/* 좌우 스크롤 화살표 — 스크롤 가능함을 명시 */}
+        <div className="mb-1.5 flex items-center justify-between">
+          <p className="text-xs font-bold text-muted">{activeMonth}</p>
+          <button
+            type="button"
+            onClick={() => setHideSpoilers((v) => !v)}
+            aria-pressed={hideSpoilers}
+            className={`rounded-full border px-2.5 py-1 text-[0.7rem] font-bold transition-colors ${
+              hideSpoilers
+                ? "border-accent/30 bg-accent-soft text-accent"
+                : "border-line bg-card text-muted"
+            }`}
+          >
+            {hideSpoilers ? "🙈 점수 가림" : "👁 점수 표시"}
+          </button>
+        </div>
+
+        {/* 화살표를 날짜 바깥쪽에 배치 (겹침 방지) */}
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             aria-label="이전 날짜"
             onClick={() => scrollStrip(-1)}
-            className="absolute left-0 top-1/2 z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full border border-line bg-card text-ink shadow-sm active:bg-canvas"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-card text-ink shadow-sm active:bg-canvas"
           >
             <span className="-mt-px text-sm font-bold leading-none">‹</span>
-          </button>
-          <button
-            type="button"
-            aria-label="다음 날짜"
-            onClick={() => scrollStrip(1)}
-            className="absolute right-0 top-1/2 z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full border border-line bg-card text-ink shadow-sm active:bg-canvas"
-          >
-            <span className="-mt-px text-sm font-bold leading-none">›</span>
           </button>
 
           <div
             ref={stripRef}
-            className="flex gap-2 overflow-x-auto scroll-px-9 px-9 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex flex-1 gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {groups.map((g) => {
               const on = g.key === activeKey;
@@ -135,6 +153,15 @@ export default function ScheduleList({
               );
             })}
           </div>
+
+          <button
+            type="button"
+            aria-label="다음 날짜"
+            onClick={() => scrollStrip(1)}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-card text-ink shadow-sm active:bg-canvas"
+          >
+            <span className="-mt-px text-sm font-bold leading-none">›</span>
+          </button>
         </div>
       </div>
 
@@ -146,7 +173,7 @@ export default function ScheduleList({
             ref={(el) => {
               sectionRefs.current[g.key] = el;
             }}
-            className="scroll-mt-28"
+            className="scroll-mt-32"
           >
             <h2 className="mb-2.5 flex items-baseline gap-2 px-0.5">
               <span className="text-sm font-extrabold text-ink">{g.label}</span>
@@ -154,14 +181,25 @@ export default function ScheduleList({
             </h2>
             <div className="space-y-3">
               {g.matches.map((m) => (
-                <MatchCard key={m.id} match={m} onOpenHighlights={setActive} />
+                <MatchCard
+                  key={m.id}
+                  match={m}
+                  hideSpoilers={hideSpoilers}
+                  onOpenHighlights={setActive}
+                />
               ))}
             </div>
           </section>
         ))}
       </div>
 
-      {active && <HighlightViewer match={active} onClose={() => setActive(null)} />}
+      {active && (
+        <HighlightViewer
+          match={active}
+          hideScore={hideSpoilers}
+          onClose={() => setActive(null)}
+        />
+      )}
     </>
   );
 }
