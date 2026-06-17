@@ -120,6 +120,19 @@ export default function MatchCard({
         <span className={nameCls}>{match.away.nameKo}</span>
       </div>
 
+      {isLive && match.liveUrl && (
+        <a
+          href={match.liveUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl bg-live py-3 text-sm font-extrabold text-white transition-transform active:scale-[0.99]"
+        >
+          <span className="live-dot h-1.5 w-1.5 rounded-full bg-white" />
+          라이브 보기
+          <span className="rounded-full bg-white/25 px-2 py-0.5 text-[0.7rem]">치지직 ↗</span>
+        </a>
+      )}
+
       {isFinished &&
         (hasHighlights ? (
           <button
