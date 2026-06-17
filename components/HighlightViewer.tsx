@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import type { Match, HighlightSource, Team } from "@/lib/types";
-import { sortHighlights, primaryEmbeddable, embedUrlFor } from "@/lib/highlights";
+import { sortHighlights, primaryEmbeddable, embedUrlFor, isChzzkOnly } from "@/lib/highlights";
 import { flagSrc } from "@/lib/countries";
 
 // 소스별 외부 링크 UX — 라벨·브랜드색(유튜브=레드, 치지직=그린)으로 어디로 열리는지 명확히.
@@ -65,6 +65,7 @@ export default function HighlightViewer({
   const embed = primaryEmbeddable(match.highlights);
   const embedSrc = embed ? embedUrlFor(embed) : null;
   const embedMeta = embed ? SOURCE_META[embed.source] : null;
+  const chzzkOnly = isChzzkOnly(match.highlights);
   const others = sorted.filter((h) => h.id !== embed?.id);
 
   return (
@@ -128,6 +129,15 @@ export default function HighlightViewer({
               >
                 재생이 안 되면 {embedMeta.open} ↗
               </a>
+            </div>
+          ) : chzzkOnly ? (
+            <div className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-4 text-center">
+              <p className="text-sm font-bold text-emerald-700">
+                치지직 정책상 여기서 바로 재생할 수 없어요
+              </p>
+              <p className="mt-1 text-xs text-emerald-600">
+                아래 링크로 치지직 앱·웹에서 시청하세요
+              </p>
             </div>
           ) : (
             <p className="shrink-0 rounded-xl bg-canvas px-3 py-4 text-center text-sm text-muted">
