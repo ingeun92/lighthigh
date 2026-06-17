@@ -32,6 +32,7 @@ export interface Match {
   status: MatchStatus;
   kickoffUtc: string; // ISO
   venue?: string;
+  liveUrl?: string; // LIVE 중일 때 치지직 공식 중계 링크 (외부 링크)
   highlights: Highlight[];
 }
 

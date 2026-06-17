@@ -9,6 +9,7 @@
 // quota: 채널당 channels(1) + playlistItems(페이지수) + videos(ids/50). 일 수십~수백 unit.
 
 import { createClient } from "@supabase/supabase-js";
+import { buildMatchIndex, findMatchByTitle } from "../lib/match-teams.ts";
 
 const YT_KEY = process.env.YOUTUBE_API_KEY?.trim();
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -90,18 +91,6 @@ const isHighlight = (title) => {
   return HIGHLIGHT_KEYWORDS.some((k) => t.includes(k.toLowerCase()));
 };
 
-function findMatch(title, teams, matchesByPair) {
-  const present = teams.filter((t) => title.includes(t.name_ko));
-  present.sort((a, b) => b.name_ko.length - a.name_ko.length);
-  for (let i = 0; i < present.length; i++) {
-    for (let j = i + 1; j < present.length; j++) {
-      const key = [present[i].id, present[j].id].sort((a, b) => a - b).join("-");
-      if (matchesByPair.has(key)) return matchesByPair.get(key);
-    }
-  }
-  return null;
-}
-
 const sortRank = (title) => {
   const t = title.toLowerCase();
   if (/3분\s*(하이라이트|hl)|풀\s*하이라이트|풀타임/.test(t)) return 0;
@@ -118,6 +107,39 @@ async function embeddableMap(ids) {
     for (const v of data.items ?? []) map.set(v.id, v.status?.embeddable === true);
   }
   return map;
+}
+
+// ── 치지직 VOD 수집 ────────────────────────────────────────
+// 월드컵 공식 채널(verifiedMark)이 직접 올리는 하이라이트 다시보기를 수집한다.
+// 치지직은 외부 임베드를 차단하므로 항상 embeddable:false(외부 링크)로 저장.
+const CHZZK_VOD_CHANNELS = [
+  { name: "북중미 월드컵 JTBC", channelId: "8ecd602c251f30fd7f09463e9f55609f" },
+  { name: "KBS스포츠", channelId: "7e9981082c184c10fcedb771e290d08b" },
+  { name: "JTBC Sports", channelId: "e40bd1a9c2c43ea1dea3edf5d3fc51b0" },
+];
+const CHZZK_UA = "Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)";
+const CHZZK_VOD_SIZE = 20; // 채널당 최신 VOD 스캔 개수
+
+// "2026-06-17 12:09:18" (KST, 타임존 없음) → ISO. 파싱 실패 시 null.
+const parseKstDate = (s) => {
+  if (!s) return null;
+  const d = new Date(`${s.replace(" ", "T")}+09:00`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
+
+async function chzzkVideos(channelId) {
+  try {
+    const r = await fetch(
+      `https://api.chzzk.naver.com/service/v1/channels/${channelId}/videos` +
+        `?sortType=LATEST&pagingType=PAGE&page=0&size=${CHZZK_VOD_SIZE}`,
+      { headers: { "User-Agent": CHZZK_UA, Accept: "application/json" } }
+    );
+    if (!r.ok) return [];
+    const j = await r.json();
+    return j?.content?.data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 async function main() {
@@ -141,12 +163,7 @@ async function main() {
   // 이미 highlights 에 있는 영상(관리자 승인 또는 자동매칭됨)은 후보 큐에 다시 넣지 않는다.
   const { data: existingHls } = await supabase.from("highlights").select("video_id");
   const inHighlights = new Set((existingHls ?? []).map((h) => h.video_id));
-  const matchesByPair = new Map();
-  for (const m of matches ?? []) {
-    if (m.home_team_id && m.away_team_id) {
-      matchesByPair.set([m.home_team_id, m.away_team_id].sort((a, b) => a - b).join("-"), m.id);
-    }
-  }
+  const matchesByPair = buildMatchIndex(matches);
 
   let scanned = 0;
   const highlightRows = [];
@@ -175,7 +192,7 @@ async function main() {
         thumbnail_url: v.snippet.thumbnails?.medium?.url ?? null,
         published_at: v.contentDetails.videoPublishedAt ?? v.snippet.publishedAt,
       };
-      const matchId = findMatch(title, teams ?? [], matchesByPair);
+      const matchId = findMatchByTitle(title, teams, matchesByPair);
       if (matchId) {
         highlightRows.push({
           match_id: matchId, ...base, embeddable: embed.get(vid) ?? false, is_approved: true,
@@ -188,6 +205,39 @@ async function main() {
       }
     }
     console.log(`  · ${ch.name}: 하이라이트 ${items.length}건 (매칭 ${chMatched}, 미매칭 ${chCand})`);
+  }
+
+  // 치지직 공식 채널 VOD 수집 (외부 임베드 차단 → embeddable:false, 외부 링크)
+  for (const ch of CHZZK_VOD_CHANNELS) {
+    const vods = await chzzkVideos(ch.channelId);
+    const items = vods.filter((v) => isHighlight(v.videoTitle ?? ""));
+    if (items.length === 0) { console.log(`  · ${ch.name}(치지직): 하이라이트 0건`); continue; }
+    scanned += items.length;
+    let chMatched = 0, chCand = 0;
+
+    for (const v of items) {
+      const vid = String(v.videoNo);
+      if (!v.videoNo || seenVid.has(vid)) continue;
+      seenVid.add(vid);
+      const title = v.videoTitle;
+      const base = {
+        source: "chzzk", video_id: vid, title, channel: ch.name,
+        thumbnail_url: v.thumbnailImageUrl ?? null,
+        published_at: parseKstDate(v.publishDate),
+      };
+      const matchId = findMatchByTitle(title, teams ?? [], matchesByPair);
+      if (matchId) {
+        highlightRows.push({
+          match_id: matchId, ...base, embeddable: false, is_approved: true,
+          url: `https://chzzk.naver.com/video/${vid}`, sort_order: sortRank(title),
+        });
+        chMatched++;
+      } else if (!inHighlights.has(vid)) {
+        candidateRows.push({ ...base, channel_id: ch.channelId, embeddable: false, review: "pending" });
+        chCand++;
+      }
+    }
+    console.log(`  · ${ch.name}(치지직): 하이라이트 ${items.length}건 (매칭 ${chMatched}, 미매칭 ${chCand})`);
   }
 
   if (highlightRows.length) {
