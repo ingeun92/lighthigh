@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-// lighthigh 데이터 소스 검증 (A)
-// 실행: pnpm verify:sources   (내부적으로 node --env-file=.env.local 사용)
+// lighthigh data source verification
+// Run: pnpm verify:sources   (internally uses node --env-file=.env.local)
 //
-// 검증 항목
-//   1. football-data.org  : 2026 월드컵(WC) 일정/결과 응답 구조 확인
-//   2. YouTube Data API   : KBS/JTBC 채널의 최근 하이라이트 영상 임베드 가능 비율 측정
+// Checks:
+//   1. football-data.org  : verify 2026 World Cup (WC) schedule/results response structure
+//   2. YouTube Data API   : measure embeddable ratio of recent highlight videos from KBS/JTBC channels
 //
-// 임베드 가능 비율은 "인앱 매끄러운 왕복" 전략을 좌우하는 핵심 지표.
+// The embeddable ratio is the key metric that drives the in-app smooth-return strategy.
 
 const FD_TOKEN = process.env.FOOTBALL_DATA_TOKEN?.trim();
 const YT_KEY = process.env.YOUTUBE_API_KEY?.trim();
 
 const HIGHLIGHT_KEYWORDS = ["하이라이트", "highlight", "골장면", "골 장면", "풀타임", "주요장면"];
-// 조사에서 확인된 한국 방송사 공식 채널
+// Official Korean broadcaster channels confirmed via research
 const CHANNELS = [
   { name: "KBS 스포츠", id: "UCDIB1DOwPPe58M2fHPyVVDA", handle: null },
   { name: "JTBC 스포츠", id: null, handle: "JTBC_sports" },
@@ -52,14 +52,14 @@ async function verifyFootballData() {
   const matches = body.matches ?? [];
   const season = body.competition?.name ?? "?";
   console.log(ok(`✓ HTTP 200 — ${season}, 경기 ${matches.length}건`));
-  // 시즌/연도 확인
+  // verify season/year
   const seasonInfo = body.season ?? matches[0]?.season ?? {};
   if (seasonInfo.startDate) console.log(`  시즌: ${seasonInfo.startDate} ~ ${seasonInfo.endDate}`);
-  // 상태 분포
+  // status distribution
   const byStatus = {};
   for (const m of matches) byStatus[m.status] = (byStatus[m.status] ?? 0) + 1;
   console.log(`  상태 분포: ${JSON.stringify(byStatus)}`);
-  // 샘플 1건
+  // sample one match
   const sample = matches.find((m) => m.status === "FINISHED") ?? matches[0];
   if (sample) {
     console.log("  샘플 경기:");
@@ -72,7 +72,7 @@ async function verifyFootballData() {
   return { ok: true, count: matches.length, is2026 };
 }
 
-// ── 2. YouTube — 임베드 가능 비율 ─────────────────────────────────
+// ── 2. YouTube — embeddable ratio ─────────────────────────────────
 async function resolveUploadsPlaylist(ch) {
   const param = ch.id ? `id=${ch.id}` : `forHandle=${ch.handle}`;
   const { body } = await getJSON(
@@ -101,7 +101,7 @@ async function verifyYouTube() {
       console.log(bad(`✗ ${ch.name}: 채널/업로드 목록 조회 실패`));
       continue;
     }
-    // 최근 업로드 50건
+    // fetch most recent 50 uploads
     const { body: plBody, status: plStatus } = await getJSON(
       `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${resolved.uploads}&key=${YT_KEY}`
     );
@@ -110,7 +110,7 @@ async function verifyYouTube() {
       continue;
     }
     const uploads = plBody.items ?? [];
-    // 하이라이트 키워드 필터
+    // filter by highlight keywords
     const cands = uploads.filter((v) => {
       const t = (v.snippet?.title ?? "").toLowerCase();
       return HIGHLIGHT_KEYWORDS.some((k) => t.includes(k.toLowerCase()));

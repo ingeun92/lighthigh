@@ -9,7 +9,7 @@ import { flagSrc } from "@/lib/countries";
 function FlagImg({ team }: { team: Team }) {
   const [err, setErr] = useState(false);
   const src = flagSrc(team.countryCode);
-  // flag-icons 4x3 는 모든 국기가 정확히 4:3 → 4:3 박스 + object-cover 로 잘림·여백 없이 균일.
+  // flag-icons 4x3 normalizes every flag to exactly 4:3 → 4:3 box + object-cover for uniform display.
   const box = "grid h-12 w-16 place-items-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-line";
   if (!src || err) {
     return <span className={`${box} text-[2rem]`}>{team.flag}</span>;
@@ -75,7 +75,7 @@ export default function MatchCard({
         )}
       </div>
 
-      {/* 1행: 국기 · 스코어 / 2행: 국가명 — 세로 정렬 일치 */}
+      {/* Row 1: flags · score / Row 2: country names — vertically aligned */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-2 py-0.5">
         <div className="flex justify-center">
           <FlagImg team={match.home} />

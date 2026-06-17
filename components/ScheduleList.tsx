@@ -36,19 +36,19 @@ export default function ScheduleList({
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const cellRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const stripRef = useRef<HTMLDivElement | null>(null);
-  const lockRef = useRef(false); // 클릭 직후 관찰자 갱신 잠금 (음영 튐 방지)
+  const lockRef = useRef(false); // lock observer updates immediately after a click (prevents highlight flicker)
 
   const scrollStrip = (dir: 1 | -1) =>
     stripRef.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
 
-  // 진입 시 오늘/가장 가까운 경기로 스크롤
+  // On mount, scroll to today's or the nearest upcoming match
   useEffect(() => {
     const key = nearestGroupKey(groups, nowIso);
     if (key && sectionRefs.current[key]) sectionRefs.current[key]!.scrollIntoView({ block: "start" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 스크롤에 따라 활성 날짜 추적 (클릭 직후 잠금 구간은 무시)
+  // Track the active date as the user scrolls (ignore updates during the post-click lock window)
   useEffect(() => {
     const obs = new IntersectionObserver(
       (entries) => {
@@ -72,7 +72,7 @@ export default function ScheduleList({
     return () => obs.disconnect();
   }, []);
 
-  // 날짜 클릭: 즉시 음영 변경 + 잠금 후 부드럽게 스크롤
+  // Date click: update highlight immediately, lock observer, then smooth-scroll
   const jump = (key: string) => {
     setActiveKey(key);
     lockRef.current = true;
@@ -90,7 +90,7 @@ export default function ScheduleList({
 
   return (
     <>
-      {/* 달력형 날짜 스트립 */}
+      {/* Calendar-style date strip */}
       <div className="sticky top-0 z-20 -mx-5 bg-canvas/95 px-5 pb-2 pt-2 backdrop-blur">
         <div className="mb-1.5 flex items-center justify-between">
           <p className="text-xs font-bold text-muted">{activeMonth}</p>
@@ -120,7 +120,7 @@ export default function ScheduleList({
           </div>
         </div>
 
-        {/* 화살표를 날짜 바깥쪽에 배치 (겹침 방지) */}
+        {/* Arrows placed outside the date strip to avoid overlap */}
         <div className="flex items-center gap-1.5">
           <button
             type="button"

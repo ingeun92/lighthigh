@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "lighthigh", statusBarStyle: "default" },
-  // 카카오톡·텔레그램 등 링크 공유 시 노출되는 썸네일 카드
+  // Thumbnail card shown when the link is shared on KakaoTalk, Telegram, etc.
   openGraph: {
     type: "website",
     siteName: "lighthigh",

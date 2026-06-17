@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// football-data.org 2026 월드컵 일정/결과 → Supabase 동기화
-// 실행: pnpm sync:matches   (node --env-file=.env.local)
+// Syncs 2026 World Cup schedule/results from football-data.org to Supabase
+// Run: pnpm sync:matches   (node --env-file=.env.local)
 //
-// 스키마(supabase/schema.sql)가 먼저 적용돼 있어야 한다.
+// Schema (supabase/schema.sql) must be applied first.
 
 import { createClient } from "@supabase/supabase-js";
 import { countryFromTla } from "../lib/countries.ts";
@@ -33,12 +33,12 @@ const STATUS_MAP = {
 
 const groupLabel = (g) => (g ? g.replace("GROUP_", "") + "조" : null);
 
-// ── 치지직 LIVE 자동 연결 ──────────────────────────────────
-// 월드컵 뉴미디어 중계권은 치지직(네이버)이 보유 → JTBC·KBS 화면을 치지직 공식 채널에서 송출.
-// search/lives 로 "월드컵" 라이브를 찾고 verifiedMark(공식 인증) 채널만 신뢰해 무단
-// 재송출 채널을 배제한다.
-//   ※ 라이브 상세(live-detail)는 "해외 시청 불가능"(code 9004)이라 GitHub Actions 등
-//     해외 IP 에서 막히지만, search/lives 는 해외에서도 verified 공식 채널 라이브를 반환한다.
+// ── Chzzk LIVE auto-linking ──────────────────────────────
+// Chzzk (Naver) holds domestic new-media broadcast rights for the World Cup → streams JTBC/KBS feeds
+// on official Chzzk channels. We search "월드컵" (World Cup) lives via search/lives and trust only
+// channels with verifiedMark (official badge) to exclude unauthorized re-streams.
+//   ※ The live-detail endpoint returns "overseas viewing unavailable" (code 9004), blocking GitHub Actions
+//     and other foreign IPs; search/lives returns verified official-channel lives from overseas as well.
 const CHZZK_UA = "Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)";
 const CHZZK_SEARCH_SIZE = 30;
 
@@ -57,10 +57,10 @@ async function chzzkSearchLives(keyword) {
   }
 }
 
-// "월드컵" 라이브를 검색해 verified 공식 채널의 생중계를 현재 LIVE 경기에 연결하고,
-// 끝난 경기의 링크는 비운다. (football-data 동기화와 독립된 best-effort)
+// Searches "월드컵" (World Cup) lives, links official verified-channel streams to current LIVE matches,
+// and clears the link for finished matches. (Independent best-effort, separate from football-data sync)
 async function syncChzzkLive() {
-  // 1) "월드컵" 라이브 검색 → verifiedMark 공식 채널만 (무단 재송출 배제)
+  // 1) Search "월드컵" (World Cup) lives → only verifiedMark official channels (exclude unauthorized re-streams)
   const results = await chzzkSearchLives("월드컵");
   const officialLives = results
     .filter((it) => it.channel?.verifiedMark)
@@ -71,7 +71,7 @@ async function syncChzzkLive() {
     }))
     .filter((x) => x.channelId && x.liveTitle);
 
-  // 2) 라이브 제목의 팀명으로 경기 매칭 → { matchId: 치지직 라이브 URL }
+  // 2) Match live title team names to matches → { matchId: Chzzk live URL }
   const liveUrlByMatch = new Map();
   if (officialLives.length) {
     const { data: teams } = await supabase.from("teams").select("id, name_ko");
@@ -81,7 +81,7 @@ async function syncChzzkLive() {
     const byPair = buildMatchIndex(matches);
     for (const ol of officialLives) {
       const matchId = findMatchByTitle(ol.liveTitle, teams, byPair);
-      // 같은 경기를 여러 공식 채널이 중계하면 먼저 매칭된 채널 링크를 유지
+      // If multiple official channels broadcast the same match, keep the first match found
       if (matchId && !liveUrlByMatch.has(matchId)) {
         liveUrlByMatch.set(matchId, `https://chzzk.naver.com/live/${ol.channelId}`);
         console.log(`  · 라이브 매칭: ${ol.name} → "${ol.liveTitle}"`);
@@ -89,18 +89,18 @@ async function syncChzzkLive() {
     }
   }
 
-  // 3) 매칭된 경기는 링크를 채우고, "경기가 끝난" 경기만 비운다 (최소 write)
+  // 3) Fill link for matched matches, clear only for finished matches (minimize writes)
   const { data: current, error: curErr } = await supabase
     .from("matches")
     .select("id, status, live_url")
     .not("live_url", "is", null);
   if (curErr) {
-    // live_url 컬럼 미적용 등 — 조용히 실패하지 않도록 명시적으로 알린다.
+    // live_url column may not exist yet — surface the error explicitly rather than failing silently.
     console.error(`! 치지직 LIVE 연결 건너뜀 — matches.live_url 확인 필요: ${curErr.message}`);
     return;
   }
-  // 경기가 더 이상 LIVE 가 아닐 때만 해제. 경기가 LIVE 인 동안엔 치지직 제목이 잠깐
-  // 바뀌거나(하프타임·광고) OPEN 이 끊겨 매칭이 실패해도 기존 링크를 유지해 버튼 깜빡임을 막는다.
+  // Only clear when match is no longer LIVE. While LIVE, keep the existing link even if the Chzzk title
+  // changes (half-time/ad break) or the stream drops — prevents the live button from flickering.
   const toClear = (current ?? [])
     .filter((m) => m.status !== "live" && !liveUrlByMatch.has(m.id))
     .map((m) => m.id);
@@ -120,10 +120,10 @@ async function syncChzzkLive() {
   );
 }
 
-// 활성 동기화 가드: 5분 크론은 유지하되, 점수가 바뀔 수 있는 "경기 활성 구간"일 때만
-// 실제 fetch+upsert를 한다. 비경기 시간(하루 대부분)엔 즉시 종료해 Supabase write 절감.
-//   활성 = 킥오프 2h 전 ~ 5h 후(≈ 경기 종료 3h 후) 구간의 경기가 있거나, status=live 인 경기 존재.
-// 단, 토너먼트 대진·일정 변경이 idle 중에도 반영되도록 매시 정각 run(분 < 5)은 무조건 동기화(heartbeat).
+// Active sync guard: keep the 5-min cron but only fetch+upsert during the "active match window"
+// when scores can change. Exit immediately during non-match hours (most of the day) to reduce Supabase writes.
+//   Active = a match exists with kickoff in [2h before, 5h after] now, or a status=live match exists.
+// Exception: every top-of-hour run (minute < 5) always syncs to pick up bracket/schedule changes (heartbeat).
 const PRE_KICKOFF_H = 2;
 const POST_KICKOFF_H = 5;
 
@@ -161,7 +161,7 @@ async function main() {
   const { matches } = await res.json();
   console.log(`· ${matches.length}경기 수신`);
 
-  // 1) 팀 수집 (TBD 제외)
+  // 1) Collect teams (skip TBD)
   const teamMap = new Map();
   for (const m of matches) {
     for (const t of [m.homeTeam, m.awayTeam]) {
@@ -172,7 +172,7 @@ async function main() {
           name_en: t.name ?? info.ko,
           name_ko: info.ko,
           country_code: t.tla ?? null,
-          flag_url: info.flag, // 이모지 플래그를 표시 토큰으로 저장
+          flag_url: info.flag, // emoji flag stored as display token
         });
       }
     }
@@ -189,7 +189,7 @@ async function main() {
   }
   const idByExternal = new Map(teamRows.map((r) => [r.external_id, r.id]));
 
-  // 2) 경기 upsert
+  // 2) Upsert matches
   const rows = matches.map((m) => ({
     external_id: String(m.id),
     stage: m.stage ?? null,
@@ -215,7 +215,7 @@ async function main() {
   const finished = rows.filter((r) => r.status === "finished").length;
   console.log(`✓ 동기화 완료 — 경기 ${rows.length}건 (종료 ${finished}건), 팀 ${teams.length}개`);
 
-  // 치지직 공식 채널 라이브 연결 (실패해도 경기 동기화 결과엔 영향 없음)
+  // Link Chzzk official channel lives (failure does not affect the match sync result)
   try {
     await syncChzzkLive();
   } catch (e) {

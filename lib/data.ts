@@ -1,5 +1,5 @@
-// 데이터 접근 레이어.
-// Supabase 가 설정되어 있으면 실데이터, 아니면 목 데이터로 폴백한다.
+// Data access layer.
+// Uses real data when Supabase is configured, falls back to mock data otherwise.
 
 import type { Match, MatchStatus, Highlight } from "./types";
 import { MOCK_MATCHES } from "./mock-data";
@@ -83,7 +83,7 @@ export async function getMatches(): Promise<Match[]> {
        highlights ( id, source, url, video_id, title, channel, embeddable, thumbnail_url )`
     )
     .order("kickoff_utc", { ascending: true })
-    // 대표 영상(맨 위 임베드)은 sort_order 가 가장 낮은 것 → 관리자가 지정 가능
+    // featured video (top embed) is the one with the lowest sort_order → admin-configurable
     .order("sort_order", { referencedTable: "highlights", ascending: true })
     .order("id", { referencedTable: "highlights", ascending: true })
     .returns<MatchRow[]>();
