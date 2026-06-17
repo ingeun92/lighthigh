@@ -7,9 +7,7 @@ name: collect-highlights
 # 수집 윈도는 실측 게시 지연(킥오프 3~16h)에 맞춰 collect-highlights.mjs에서 가드.
 # 매칭 성공 → highlights / 애매 → highlight_candidates(관리자 검토).
 on:
-  schedule:
-    - cron: "*/15 * * * *" # 매 15분 (UTC 기준, GitHub 부하 시 수 분 지연될 수 있음)
-  workflow_dispatch: {} # Actions 탭에서 수동 실행 가능
+  workflow_dispatch: {} # cron-job.org에서 15분 간격으로 API 호출해 발화 (GitHub schedule throttle 우회)
 
 concurrency:
   group: collect-highlights
