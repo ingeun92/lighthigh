@@ -4,6 +4,8 @@ name: sync-matches
 # 라이브 점수가 너무 outdated 되지 않게 5분 주기로 동기화. 실행당 API 1 call이라
 # 무료 한도(분당 10) 안에서 여유롭고, GitHub Actions(public repo)는 무제한이라 비용 0.
 # 화면은 ISR(1분) 으로 뒤따라 갱신 → 점수 반영 지연 최대 약 6분.
+# 비경기 시간엔 스크립트 활성 가드가 즉시 종료(매시 정각은 heartbeat 동기화)해
+# Supabase write 부하를 줄인다 — 점수 신선도(활성 구간 5분 동기화)는 그대로.
 on:
   schedule:
     - cron: "*/5 * * * *" # 매 5분 (UTC 기준, GitHub 부하 시 수 분 지연될 수 있음)

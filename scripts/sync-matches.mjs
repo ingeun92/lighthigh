@@ -32,7 +32,36 @@ const STATUS_MAP = {
 
 const groupLabel = (g) => (g ? g.replace("GROUP_", "") + "조" : null);
 
+// 활성 동기화 가드: 5분 크론은 유지하되, 점수가 바뀔 수 있는 "경기 활성 구간"일 때만
+// 실제 fetch+upsert를 한다. 비경기 시간(하루 대부분)엔 즉시 종료해 Supabase write 절감.
+//   활성 = 킥오프 2h 전 ~ 5h 후(≈ 경기 종료 3h 후) 구간의 경기가 있거나, status=live 인 경기 존재.
+// 단, 토너먼트 대진·일정 변경이 idle 중에도 반영되도록 매시 정각 run(분 < 5)은 무조건 동기화(heartbeat).
+const PRE_KICKOFF_H = 2;
+const POST_KICKOFF_H = 5;
+
+async function shouldSync() {
+  if (new Date().getUTCMinutes() < 5) return { sync: true, reason: "heartbeat(매시 정각)" };
+  const now = Date.now();
+  const lo = new Date(now - POST_KICKOFF_H * 3600_000).toISOString();
+  const hi = new Date(now + PRE_KICKOFF_H * 3600_000).toISOString();
+  const { data, error } = await supabase
+    .from("matches")
+    .select("id")
+    .or(`and(kickoff_utc.gte.${lo},kickoff_utc.lte.${hi}),status.eq.live`)
+    .limit(1);
+  if (error) return { sync: true, reason: `가드 조회 실패(${error.message}) → 안전상 동기화` };
+  return data?.length
+    ? { sync: true, reason: "활성 경기 구간" }
+    : { sync: false, reason: "비경기 시간" };
+}
+
 async function main() {
+  const guard = await shouldSync();
+  if (!guard.sync) {
+    console.log(`· 동기화 건너뜀 — ${guard.reason} (킥오프 ${PRE_KICKOFF_H}h 전 ~ ${POST_KICKOFF_H}h 후 경기 없음)`);
+    return;
+  }
+  console.log(`· 동기화 진행 — ${guard.reason}`);
   console.log("· football-data 에서 2026 월드컵 경기 가져오는 중...");
   const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches", {
     headers: { "X-Auth-Token": FD_TOKEN },
