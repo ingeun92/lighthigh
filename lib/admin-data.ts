@@ -96,7 +96,7 @@ export async function getAdminData(): Promise<AdminData> {
       .from("matches")
       .select("id, kickoff_utc, group_label, home:home_team_id(name_ko), away:away_team_id(name_ko)")
       .in("status", ["finished", "live"]) // 치러진 경기만 매핑 대상
-      .order("kickoff_utc")
+      .order("kickoff_utc", { ascending: false }) // 최신 경기를 드롭다운 위로 (후보 등록 편의)
       .returns<MatchRow[]>(),
     fetchHighlights(),
     sb
