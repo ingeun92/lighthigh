@@ -62,6 +62,7 @@ interface HighlightRow {
 export interface HighlightGroup {
   matchId: number;
   label: string;
+  kickoffUtc: string; // 정렬용 — 최신 경기를 위로
   items: AdminHighlight[];
   mismatchCount: number; // 오매칭 의심(⚠️) 개수
   hasPrimary: boolean; // 임베드 대표 영상 존재 여부
@@ -161,6 +162,7 @@ export async function getAdminData(): Promise<AdminData> {
 
   // 경기별 그룹 (highlights 는 이미 match_id, sort_order, id 순)
   const labelById = new Map(matches.map((m) => [m.id, m.label]));
+  const kickoffById = new Map((matchRows ?? []).map((m) => [m.id, m.kickoff_utc]));
   const groupMap = new Map<number, HighlightGroup>();
   for (const h of highlights) {
     let g = groupMap.get(h.matchId);
@@ -168,6 +170,7 @@ export async function getAdminData(): Promise<AdminData> {
       g = {
         matchId: h.matchId,
         label: labelById.get(h.matchId) ?? `${h.homeKo} vs ${h.awayKo}`,
+        kickoffUtc: kickoffById.get(h.matchId) ?? "",
         items: [],
         mismatchCount: 0,
         hasPrimary: false,
@@ -178,9 +181,10 @@ export async function getAdminData(): Promise<AdminData> {
     if (h.needsReview) g.mismatchCount += 1;
     if (h.isPrimary) g.hasPrimary = true;
   }
-  // 교정 필요한 경기(오매칭 의심)를 먼저
-  const highlightGroups = [...groupMap.values()].sort(
-    (a, b) => b.mismatchCount - a.mismatchCount
+  // 최신 경기를 위로 (지난 경기는 보통 교정하지 않으므로) — kickoff 내림차순.
+  // ISO UTC 문자열이라 사전식 비교 = 시간순. 교정 필요 경기는 ⚠️ 배지로 식별.
+  const highlightGroups = [...groupMap.values()].sort((a, b) =>
+    b.kickoffUtc.localeCompare(a.kickoffUtc)
   );
 
   return { matches, highlights, highlightGroups, candidates };

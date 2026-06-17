@@ -1,11 +1,12 @@
 name: sync-matches
 
 # 경기 일정·점수 동기화 (football-data.org → Supabase)
-# 하이라이트 앱이라 라이브 스코어 정밀도는 불필요 — 종료 후 30분 내 finished 반영이면 충분.
-# 화면은 ISR(5분) 으로 뒤따라 갱신.
+# 라이브 점수가 너무 outdated 되지 않게 5분 주기로 동기화. 실행당 API 1 call이라
+# 무료 한도(분당 10) 안에서 여유롭고, GitHub Actions(public repo)는 무제한이라 비용 0.
+# 화면은 ISR(1분) 으로 뒤따라 갱신 → 점수 반영 지연 최대 약 6분.
 on:
   schedule:
-    - cron: "*/30 * * * *" # 매 30분 (UTC 기준, GitHub 부하 시 수 분 지연될 수 있음)
+    - cron: "*/5 * * * *" # 매 5분 (UTC 기준, GitHub 부하 시 수 분 지연될 수 있음)
   workflow_dispatch: {} # Actions 탭에서 수동 실행 가능
 
 # 직전 실행이 안 끝났으면 새 실행을 큐에 쌓지 않고 건너뜀(중복 방지)
