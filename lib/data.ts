@@ -30,6 +30,7 @@ interface MatchRow {
   status: MatchStatus;
   kickoff_utc: string;
   venue: string | null;
+  live_url: string | null;
   home: TeamRow | null;
   away: TeamRow | null;
   highlights: HighlightRow[] | null;
@@ -64,6 +65,7 @@ function mapRow(r: MatchRow): Match {
     status: r.status,
     kickoffUtc: r.kickoff_utc,
     venue: r.venue ?? undefined,
+    liveUrl: r.live_url ?? undefined,
     highlights,
   };
 }
@@ -75,7 +77,7 @@ export async function getMatches(): Promise<Match[]> {
   const { data, error } = await supabase
     .from("matches")
     .select(
-      `id, stage, group_label, home_score, away_score, status, kickoff_utc, venue,
+      `id, stage, group_label, home_score, away_score, status, kickoff_utc, venue, live_url,
        home:home_team_id ( name_ko, name_en, country_code, flag_url ),
        away:away_team_id ( name_ko, name_en, country_code, flag_url ),
        highlights ( id, source, url, video_id, title, channel, embeddable, thumbnail_url )`
