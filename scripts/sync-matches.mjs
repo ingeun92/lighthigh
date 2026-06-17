@@ -35,55 +35,56 @@ const groupLabel = (g) => (g ? g.replace("GROUP_", "") + "조" : null);
 
 // ── 치지직 LIVE 자동 연결 ──────────────────────────────────
 // 월드컵 뉴미디어 중계권은 치지직(네이버)이 보유 → JTBC·KBS 화면을 치지직 공식 채널에서 송출.
-// 공식(verifiedMark) 채널만 화이트리스트로 두어 무단 재송출 채널 노출을 차단한다.
-const CHZZK_LIVE_CHANNELS = [
-  { name: "북중미 월드컵 JTBC", channelId: "8ecd602c251f30fd7f09463e9f55609f" },
-  { name: "KBS스포츠", channelId: "7e9981082c184c10fcedb771e290d08b" },
-  { name: "JTBC Sports", channelId: "e40bd1a9c2c43ea1dea3edf5d3fc51b0" },
-];
+// search/lives 로 "월드컵" 라이브를 찾고 verifiedMark(공식 인증) 채널만 신뢰해 무단
+// 재송출 채널을 배제한다.
+//   ※ 라이브 상세(live-detail)는 "해외 시청 불가능"(code 9004)이라 GitHub Actions 등
+//     해외 IP 에서 막히지만, search/lives 는 해외에서도 verified 공식 채널 라이브를 반환한다.
 const CHZZK_UA = "Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)";
+const CHZZK_SEARCH_SIZE = 30;
 
-async function chzzkLiveDetail(channelId) {
+async function chzzkSearchLives(keyword) {
   try {
     const r = await fetch(
-      `https://api.chzzk.naver.com/service/v2/channels/${channelId}/live-detail`,
+      `https://api.chzzk.naver.com/service/v1/search/lives` +
+        `?keyword=${encodeURIComponent(keyword)}&size=${CHZZK_SEARCH_SIZE}`,
       { headers: { "User-Agent": CHZZK_UA, Accept: "application/json" } }
     );
-    if (!r.ok) return null;
+    if (!r.ok) return [];
     const j = await r.json();
-    return j?.content ?? null;
+    return j?.content?.data ?? [];
   } catch {
-    return null;
+    return [];
   }
 }
 
-// 공식 채널들의 라이브를 폴링해 현재 LIVE 경기에 치지직 중계 링크를 채우고,
-// 더 이상 중계되지 않는 경기의 링크는 비운다. (football-data 동기화와 독립된 best-effort)
+// "월드컵" 라이브를 검색해 verified 공식 채널의 생중계를 현재 LIVE 경기에 연결하고,
+// 끝난 경기의 링크는 비운다. (football-data 동기화와 독립된 best-effort)
 async function syncChzzkLive() {
-  // 1) 공식 채널 중 지금 월드컵 라이브(OPEN)인 것 수집
-  const openChannels = [];
-  for (const ch of CHZZK_LIVE_CHANNELS) {
-    const d = await chzzkLiveDetail(ch.channelId);
-    const isWorldcup = /월드컵/.test(`${d?.liveCategoryValue ?? ""} ${d?.liveTitle ?? ""}`);
-    if (d?.status === "OPEN" && isWorldcup && d?.liveTitle) {
-      openChannels.push({ channelId: ch.channelId, name: ch.name, liveTitle: d.liveTitle });
-    }
-  }
+  // 1) "월드컵" 라이브 검색 → verifiedMark 공식 채널만 (무단 재송출 배제)
+  const results = await chzzkSearchLives("월드컵");
+  const officialLives = results
+    .filter((it) => it.channel?.verifiedMark)
+    .map((it) => ({
+      channelId: it.live?.channelId ?? it.channel?.channelId,
+      name: it.channel?.channelName ?? "",
+      liveTitle: it.live?.liveTitle ?? "",
+    }))
+    .filter((x) => x.channelId && x.liveTitle);
 
   // 2) 라이브 제목의 팀명으로 경기 매칭 → { matchId: 치지직 라이브 URL }
   const liveUrlByMatch = new Map();
-  if (openChannels.length) {
+  if (officialLives.length) {
     const { data: teams } = await supabase.from("teams").select("id, name_ko");
     const { data: matches } = await supabase
       .from("matches")
       .select("id, home_team_id, away_team_id");
     const byPair = buildMatchIndex(matches);
-    for (const oc of openChannels) {
-      const matchId = findMatchByTitle(oc.liveTitle, teams, byPair);
-      // 같은 경기를 여러 채널이 중계하면 먼저 매칭된 채널(JTBC 우선) 링크를 유지
+    for (const ol of officialLives) {
+      const matchId = findMatchByTitle(ol.liveTitle, teams, byPair);
+      // 같은 경기를 여러 공식 채널이 중계하면 먼저 매칭된 채널 링크를 유지
       if (matchId && !liveUrlByMatch.has(matchId)) {
-        liveUrlByMatch.set(matchId, `https://chzzk.naver.com/live/${oc.channelId}`);
-        console.log(`  · 라이브 매칭: ${oc.name} → "${oc.liveTitle}"`);
+        liveUrlByMatch.set(matchId, `https://chzzk.naver.com/live/${ol.channelId}`);
+        console.log(`  · 라이브 매칭: ${ol.name} → "${ol.liveTitle}"`);
       }
     }
   }
