@@ -1,5 +1,5 @@
-// 영상/라이브 제목의 팀명으로 DB 경기를 찾는 공용 매칭 로직.
-// YouTube 하이라이트 수집(collect-highlights)·치지직 라이브/VOD(sync-matches)에서 공유한다.
+// Shared logic for matching a DB match by team names found in a video/live title.
+// Used by both the YouTube highlight collector (collect-highlights) and Chzzk live/VOD sync (sync-matches).
 
 export interface TeamLite {
   id: number;
@@ -11,7 +11,7 @@ interface MatchLite {
   away_team_id: number | null;
 }
 
-// 경기를 "정렬된 두 팀 id" 키로 인덱싱 → 제목에서 찾은 팀 쌍으로 O(1) 조회.
+// Index matches by a "sorted pair of team IDs" key → O(1) lookup by the team pair found in the title.
 export function buildMatchIndex(matches: MatchLite[] | null | undefined): Map<string, number> {
   const byPair = new Map<string, number>();
   for (const m of matches ?? []) {
@@ -22,7 +22,7 @@ export function buildMatchIndex(matches: MatchLite[] | null | undefined): Map<st
   return byPair;
 }
 
-// 제목에 등장하는 팀명(긴 이름 우선)으로 경기를 찾는다. 매칭 실패 시 null.
+// Find a match by team names appearing in the title (longer names matched first). Returns null on failure.
 export function findMatchByTitle(
   title: string,
   teams: TeamLite[] | null | undefined,

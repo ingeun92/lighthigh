@@ -5,7 +5,7 @@ import type { Match, HighlightSource, Team } from "@/lib/types";
 import { sortHighlights, primaryEmbeddable, embedUrlFor, isChzzkOnly } from "@/lib/highlights";
 import { flagSrc } from "@/lib/countries";
 
-// 소스별 외부 링크 UX — 라벨·브랜드색(유튜브=레드, 치지직=그린)으로 어디로 열리는지 명확히.
+// Per-source external link UX — label and brand color (YouTube=red, Chzzk=green) make the destination clear.
 const SOURCE_META: Record<HighlightSource, { label: string; open: string; chip: string; text: string }> = {
   youtube: { label: "YouTube", open: "YouTube에서 열기", chip: "bg-red-50 text-red-600", text: "text-red-600" },
   chzzk: { label: "치지직", open: "치지직 앱에서 열기", chip: "bg-emerald-50 text-emerald-600", text: "text-emerald-600" },
@@ -13,7 +13,7 @@ const SOURCE_META: Record<HighlightSource, { label: string; open: string; chip: 
 
 function FlagMini({ team }: { team: Team }) {
   const src = flagSrc(team.countryCode);
-  // flag-icons 4x3 → 4:3 박스 + object-cover 로 잘림·여백 없이 균일.
+  // flag-icons 4x3 → 4:3 box + object-cover for uniform display without clipping or padding.
   const box = "grid h-5 w-[1.667rem] shrink-0 place-items-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-line";
   if (!src) return <span className={`${box} text-xs`}>{team.flag}</span>;
   return (
@@ -44,7 +44,7 @@ export default function HighlightViewer({
 }) {
   const showScore = !hideScore || revealed;
 
-  // 안드로이드 뒤로가기로 닫히도록 history state push
+  // Push a history state so the Android back button closes the viewer
   useEffect(() => {
     window.history.pushState({ hv: true }, "");
     const onPop = () => onClose();
@@ -79,7 +79,7 @@ export default function HighlightViewer({
         className="mt-auto flex max-h-[88vh] w-full flex-col rounded-t-3xl bg-card text-ink [transform:translateZ(0)] [backface-visibility:hidden] sm:mt-0 sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl sm:shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 헤더 */}
+        {/* Header */}
         <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-4 sm:px-6 sm:pt-6">
           <p className="flex min-w-0 items-center gap-2 text-sm font-bold sm:text-base">
             <FlagMini team={match.home} />
@@ -107,7 +107,7 @@ export default function HighlightViewer({
           </button>
         </div>
 
-        {/* 본문 (스크롤) */}
+        {/* Content (scrollable) */}
         <div className="flex min-h-0 flex-1 flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-6">
           {embed && embedSrc && embedMeta ? (
             <div className="shrink-0 space-y-2">
@@ -120,7 +120,7 @@ export default function HighlightViewer({
                   allowFullScreen
                 />
               </div>
-              {/* 런타임 임베드 차단(유튜브 101/150, 치지직 미지원 등) 대비 소스별 폴백 링크 항상 노출 */}
+              {/* Always show a source-specific fallback link in case of runtime embed blocking (YouTube 101/150, Chzzk unsupported, etc.) */}
               <a
                 href={embed.url}
                 target="_blank"

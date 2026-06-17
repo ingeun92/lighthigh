@@ -29,7 +29,7 @@ function MatchOptions({ matches }: { matches: MatchOption[] }) {
 const selectCls = "min-w-0 flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-xs";
 const btn = "rounded-lg px-3 py-1.5 text-xs font-semibold";
 
-// 경기 그룹 내 개별 하이라이트
+// Individual highlight item within a match group
 function HighlightItem({ h, matches }: { h: AdminHighlight; matches: MatchOption[] }) {
   return (
     <div
@@ -113,7 +113,7 @@ export default async function AdminPage() {
         </form>
       </header>
 
-      {/* ── 후보 큐 ── */}
+      {/* ── Candidate queue ── */}
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-bold text-neutral-800">🗂 미매칭 후보 ({candidates.length})</h2>
         {candidates.length === 0 && <p className="text-sm text-neutral-400">검토할 후보가 없습니다.</p>}
@@ -150,7 +150,7 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* ── 하이라이트 교정 (경기별 접이식) ── */}
+      {/* ── Highlight correction (collapsible per match) ── */}
       <section className="mb-8">
         <h2 className="mb-1 text-sm font-bold text-neutral-800">
           🔧 하이라이트 교정 — 경기별 ({highlightGroups.length}경기)
@@ -191,7 +191,7 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* ── 수동 추가 ── */}
+      {/* ── Manual add ── */}
       <section>
         <h2 className="mb-3 text-sm font-bold text-neutral-800">➕ 수동 추가 (치지직/유튜브)</h2>
         <form action={addManualHighlight} className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3">

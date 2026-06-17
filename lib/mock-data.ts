@@ -1,5 +1,5 @@
-// 키/DB 없이 UI 를 검증하기 위한 목 데이터.
-// 실제 연동 시 lib/data.ts 의 Supabase 쿼리로 대체된다.
+// Mock data for verifying the UI without API keys or a database.
+// Replaced by the Supabase query in lib/data.ts when the real integration is active.
 
 import type { Match } from "./types";
 
@@ -73,7 +73,7 @@ export const MOCK_MATCHES: Match[] = [
         videoId: "abc12345",
         title: "[풀 하이라이트] 멕시코 0-3 브라질",
         channel: "JTBC 스포츠",
-        embeddable: false, // 임베드 차단 → 외부 링크 폴백 데모
+        embeddable: false, // embed blocked → external link fallback demo
       },
     ],
   },

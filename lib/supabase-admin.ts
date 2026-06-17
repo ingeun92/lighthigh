@@ -1,5 +1,5 @@
-// 서버 전용 Supabase 클라이언트 (service_role — RLS 우회).
-// 절대 클라이언트 컴포넌트에서 import 하지 말 것. 서버 액션/서버 컴포넌트에서만 사용.
+// Server-only Supabase client (service_role — bypasses RLS).
+// Never import from client components. Use only in server actions and server components.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
