@@ -2,8 +2,9 @@ import ScheduleList from "@/components/ScheduleList";
 import { getMatches } from "@/lib/data";
 import { kstDateKey } from "@/lib/format";
 
-// 대회 중에는 자주 갱신
-export const revalidate = 300;
+// 라이브 점수가 너무 outdated 되지 않게 1분마다 갱신 (sync 크론 5분과 맞물려 지연 최대 ~6분).
+// ISR은 stale-while-revalidate라 트래픽 있을 때만 재생성 → 비라이브 시간엔 부담 없음.
+export const revalidate = 60;
 
 export default async function Home() {
   const matches = await getMatches();
