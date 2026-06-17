@@ -143,7 +143,7 @@ export async function addManualHighlight(formData: FormData) {
       video_id: parsed!.videoId,
       title: String(formData.get("title") ?? "") || null,
       channel: parsed!.source === "chzzk" ? "치지직" : null,
-      // 유튜브 수동 추가는 임베드 가능으로 가정(뷰어에 폴백 링크 있음), 치지직은 외부 링크
+      // 유튜브 수동 추가는 임베드 가능으로 가정(뷰어에 폴백 링크 있음), 치지직은 외부 링크(임베드 차단)
       embeddable: parsed!.source === "youtube",
       is_approved: true,
     },

@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import type { Match, Highlight, Team } from "@/lib/types";
-import { sortHighlights, primaryEmbeddable, youtubeEmbedUrl } from "@/lib/highlights";
+import type { Match, HighlightSource, Team } from "@/lib/types";
+import { sortHighlights, primaryEmbeddable, embedUrlFor, isChzzkOnly } from "@/lib/highlights";
 import { flagSrc } from "@/lib/countries";
 
-const sourceLabel = (h: Highlight) =>
-  h.source === "youtube" ? `YouTube${h.channel ? " · " + h.channel : ""}` : "치지직";
+// 소스별 외부 링크 UX — 라벨·브랜드색(유튜브=레드, 치지직=그린)으로 어디로 열리는지 명확히.
+const SOURCE_META: Record<HighlightSource, { label: string; open: string; chip: string; text: string }> = {
+  youtube: { label: "YouTube", open: "YouTube에서 열기", chip: "bg-red-50 text-red-600", text: "text-red-600" },
+  chzzk: { label: "치지직", open: "치지직 앱에서 열기", chip: "bg-emerald-50 text-emerald-600", text: "text-emerald-600" },
+};
 
 function FlagMini({ team }: { team: Team }) {
   const src = flagSrc(team.countryCode);
@@ -60,6 +63,9 @@ export default function HighlightViewer({
 
   const sorted = sortHighlights(match.highlights);
   const embed = primaryEmbeddable(match.highlights);
+  const embedSrc = embed ? embedUrlFor(embed) : null;
+  const embedMeta = embed ? SOURCE_META[embed.source] : null;
+  const chzzkOnly = isChzzkOnly(match.highlights);
   const others = sorted.filter((h) => h.id !== embed?.id);
 
   return (
@@ -103,26 +109,35 @@ export default function HighlightViewer({
 
         {/* 본문 (스크롤) */}
         <div className="flex min-h-0 flex-1 flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-6">
-          {embed && embed.videoId ? (
+          {embed && embedSrc && embedMeta ? (
             <div className="shrink-0 space-y-2">
               <div className="aspect-video w-full overflow-hidden rounded-2xl bg-ink">
                 <iframe
                   className="h-full w-full"
-                  src={youtubeEmbedUrl(embed.videoId)}
+                  src={embedSrc}
                   title={embed.title ?? "하이라이트"}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 />
               </div>
-              {/* 런타임 임베드 차단(101/150) 대비 폴백 링크 항상 노출 */}
+              {/* 런타임 임베드 차단(유튜브 101/150, 치지직 미지원 등) 대비 소스별 폴백 링크 항상 노출 */}
               <a
                 href={embed.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block text-center text-xs font-bold text-accent underline"
+                className={`block text-center text-xs font-bold underline ${embedMeta.text}`}
               >
-                재생이 안 되면 YouTube 에서 열기 ↗
+                재생이 안 되면 {embedMeta.open} ↗
               </a>
+            </div>
+          ) : chzzkOnly ? (
+            <div className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-4 text-center">
+              <p className="text-sm font-bold text-emerald-700">
+                치지직 정책상 여기서 바로 재생할 수 없어요
+              </p>
+              <p className="mt-1 text-xs text-emerald-600">
+                아래 링크로 치지직 앱·웹에서 시청하세요
+              </p>
             </div>
           ) : (
             <p className="shrink-0 rounded-xl bg-canvas px-3 py-4 text-center text-sm text-muted">
@@ -136,18 +151,28 @@ export default function HighlightViewer({
                 <p className="eyebrow shrink-0 pb-2 text-muted">다른 하이라이트 {others.length}</p>
               )}
               <div className="-mr-1 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                {others.map((h) => (
-                  <a
-                    key={h.id}
-                    href={h.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between rounded-xl border border-line bg-canvas px-4 py-3 text-sm hover:border-accent/40"
-                  >
-                    <span className="truncate font-medium text-ink">{h.title ?? sourceLabel(h)}</span>
-                    <span className="ml-2 shrink-0 font-bold text-muted">{sourceLabel(h)} ↗</span>
-                  </a>
-                ))}
+                {others.map((h) => {
+                  const meta = SOURCE_META[h.source];
+                  return (
+                    <a
+                      key={h.id}
+                      href={h.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between gap-2 rounded-xl border border-line bg-canvas px-4 py-3 text-sm hover:border-accent/40"
+                    >
+                      <span className="min-w-0 truncate font-medium text-ink">
+                        {h.title ?? `${meta.label}${h.channel ? " · " + h.channel : ""}`}
+                      </span>
+                      <span
+                        className={`inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.65rem] font-bold ${meta.chip}`}
+                      >
+                        {meta.label}
+                        <span aria-hidden>↗</span>
+                      </span>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}
