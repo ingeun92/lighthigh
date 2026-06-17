@@ -1,0 +1,25 @@
+name: debug-chzzk
+# 일회용 진단: 해외(GitHub Actions) IP 에서 search/lives 가 verified 공식 채널의
+# 월드컵 라이브를 반환하는지 확인. 검증 후 삭제.
+on:
+  push:
+    branches: [dev]
+    paths: [".github/workflows/debug-chzzk.yml"]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: search/lives 월드컵 (해외 IP)
+        run: |
+          curl -s -G "https://api.chzzk.naver.com/service/v1/search/lives" \
+            --data-urlencode "keyword=월드컵" --data-urlencode "size=12" \
+            -H "User-Agent: Mozilla/5.0" -H "Accept: application/json" \
+            | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          print('CODE', d.get('code'))
+          for it in d.get('content',{}).get('data',[]):
+              lv=it.get('live',{}); ch=it.get('channel',{})
+              print('VERIFIED' if ch.get('verifiedMark') else 'unverified', '|', ch.get('channelName'), '|', (lv.get('liveTitle') or '')[:40])
+          "
