@@ -7,9 +7,7 @@ name: sync-matches
 # 비경기 시간엔 스크립트 활성 가드가 즉시 종료(매시 정각은 heartbeat 동기화)해
 # Supabase write 부하를 줄인다 — 점수 신선도(활성 구간 5분 동기화)는 그대로.
 on:
-  schedule:
-    - cron: "*/5 * * * *" # 매 5분 (UTC 기준, GitHub 부하 시 수 분 지연될 수 있음)
-  workflow_dispatch: {} # Actions 탭에서 수동 실행 가능
+  workflow_dispatch: {} # cron-job.org에서 5분 간격으로 API 호출해 발화 (GitHub schedule throttle 우회)
 
 # 직전 실행이 안 끝났으면 새 실행을 큐에 쌓지 않고 건너뜀(중복 방지)
 concurrency:

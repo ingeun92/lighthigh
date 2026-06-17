@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import Footer from "@/components/Footer";
 
 const TITLE = "lighthigh — 월드컵 하이라이트 한 곳에";
 const DESCRIPTION =
@@ -43,7 +44,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <body className="min-h-full bg-canvas text-ink">{children}</body>
+      <body className="min-h-full bg-canvas pb-[calc(3rem+env(safe-area-inset-bottom))] text-ink">
+        {children}
+        <Footer />
+      </body>
     </html>
   );
 }
