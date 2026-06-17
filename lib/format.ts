@@ -84,6 +84,16 @@ export function groupByKstDate(matches: Match[]): DateGroup[] {
     }
     map.get(key)!.matches.push(m);
   }
+  // 같은 날짜 안에서 진행 중(LIVE) 경기를 최상단으로 끌어올린다(여러 개면 kickoff 순 유지).
+  // 안정 정렬이라 LIVE 가 아닌 경기는 기존 kickoff 순서 그대로 → 라이브 종료 시 자동 복귀.
+  for (const g of map.values()) {
+    g.matches.sort((a, b) => {
+      const liveDiff = (a.status === "live" ? 0 : 1) - (b.status === "live" ? 0 : 1);
+      return liveDiff !== 0
+        ? liveDiff
+        : +new Date(a.kickoffUtc) - +new Date(b.kickoffUtc);
+    });
+  }
   return [...map.values()];
 }
 
