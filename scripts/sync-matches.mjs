@@ -88,18 +88,20 @@ async function syncChzzkLive() {
     }
   }
 
-  // 3) 현재 링크가 채워진 경기 중 더 이상 매칭 안 되는 건 비우고, 매칭된 건 채운다 (최소 write)
+  // 3) 매칭된 경기는 링크를 채우고, "경기가 끝난" 경기만 비운다 (최소 write)
   const { data: current, error: curErr } = await supabase
     .from("matches")
-    .select("id, live_url")
+    .select("id, status, live_url")
     .not("live_url", "is", null);
   if (curErr) {
     // live_url 컬럼 미적용 등 — 조용히 실패하지 않도록 명시적으로 알린다.
     console.error(`! 치지직 LIVE 연결 건너뜀 — matches.live_url 확인 필요: ${curErr.message}`);
     return;
   }
+  // 경기가 더 이상 LIVE 가 아닐 때만 해제. 경기가 LIVE 인 동안엔 치지직 제목이 잠깐
+  // 바뀌거나(하프타임·광고) OPEN 이 끊겨 매칭이 실패해도 기존 링크를 유지해 버튼 깜빡임을 막는다.
   const toClear = (current ?? [])
-    .filter((m) => !liveUrlByMatch.has(m.id))
+    .filter((m) => m.status !== "live" && !liveUrlByMatch.has(m.id))
     .map((m) => m.id);
   for (const [matchId, url] of liveUrlByMatch) {
     const existing = (current ?? []).find((m) => m.id === matchId);
