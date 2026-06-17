@@ -1,9 +1,10 @@
 name: collect-highlights
 
 # 유튜브 공식 채널 하이라이트 수집·자동매칭 (YouTube Data API → Supabase)
-# 새벽 경기 → 아침 시청 패턴: 경기 종료 직후 올라오는 하이라이트를 촘촘히(15분) 잡아
+# 새벽 경기 → 아침 시청 패턴: 경기 종료 후 올라오는 하이라이트를 촘촘히(15분) 잡아
 # 사용자가 아침에 열었을 때 이미 준비돼 있게 한다. 비경기 시간엔 스크립트 스케줄 가드가
 # 즉시 idle 처리하므로 쿼터 안전(채널4×약6 = 24u/run × 96회/일 ≈ 2.3K/10K units).
+# 수집 윈도는 실측 게시 지연(킥오프 3~16h)에 맞춰 collect-highlights.mjs에서 가드.
 # 매칭 성공 → highlights / 애매 → highlight_candidates(관리자 검토).
 on:
   schedule:
