@@ -16,7 +16,7 @@ const urlFor = (source: string, videoId: string) =>
     ? `https://chzzk.naver.com/video/${videoId}`
     : `https://www.youtube.com/watch?v=${videoId}`;
 
-// ── 인증 ──────────────────────────────────────────────
+// ── Authentication ────────────────────────────────────
 export async function login(formData: FormData) {
   const token = String(formData.get("token") ?? "");
   if (token && token === process.env.ADMIN_TOKEN) {
@@ -36,7 +36,7 @@ export async function logout() {
   redirect("/admin/login");
 }
 
-// ── 하이라이트 교정 ───────────────────────────────────
+// ── Highlight correction ──────────────────────────────
 export async function reassignHighlight(formData: FormData) {
   const id = String(formData.get("id"));
   const matchId = Number(formData.get("matchId"));
@@ -54,7 +54,7 @@ export async function deleteHighlight(formData: FormData) {
   refresh();
 }
 
-// 이 하이라이트를 '대표(맨 위 임베드)' 로 지정 — 같은 경기 내 최저 sort_order 보다 낮게
+// Feature this highlight as the top embed — assign a sort_order lower than the current minimum in the same match
 export async function featureHighlight(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
@@ -70,7 +70,7 @@ export async function featureHighlight(formData: FormData) {
   refresh();
 }
 
-// 오매칭 경고를 '확인·해결' 처리 / 되돌리기
+// Mark a mismatch warning as resolved / undo the resolution
 export async function resolveHighlight(formData: FormData) {
   const id = String(formData.get("id"));
   if (!id) return;
@@ -87,7 +87,7 @@ export async function unresolveHighlight(formData: FormData) {
   refresh();
 }
 
-// ── 후보 큐 ───────────────────────────────────────────
+// ── Candidate queue ───────────────────────────────────
 export async function approveCandidate(formData: FormData) {
   const id = Number(formData.get("id"));
   const matchId = Number(formData.get("matchId"));
@@ -126,7 +126,7 @@ export async function rejectCandidate(formData: FormData) {
   refresh();
 }
 
-// ── 수동 추가 (치지직 등) ─────────────────────────────
+// ── Manual add (Chzzk, YouTube, etc.) ────────────────
 export async function addManualHighlight(formData: FormData) {
   const matchId = Number(formData.get("matchId"));
   const rawUrl = String(formData.get("url") ?? "");
@@ -143,7 +143,7 @@ export async function addManualHighlight(formData: FormData) {
       video_id: parsed!.videoId,
       title: String(formData.get("title") ?? "") || null,
       channel: parsed!.source === "chzzk" ? "치지직" : null,
-      // 유튜브 수동 추가는 임베드 가능으로 가정(뷰어에 폴백 링크 있음), 치지직은 외부 링크(임베드 차단)
+      // YouTube manual-add is assumed embeddable (viewer has a fallback link); Chzzk is external-link-only (embedding blocked)
       embeddable: parsed!.source === "youtube",
       is_approved: true,
     },

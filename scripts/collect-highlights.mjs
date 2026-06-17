@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// YouTube 공식 채널에서 월드컵 하이라이트를 수집해 경기에 자동 매칭한다.
-// 실행: pnpm collect:highlights
+// Collects 2026 World Cup highlights from official YouTube channels and auto-matches them to matches.
+// Run: pnpm collect:highlights
 //
-// 흐름: 채널 uploads 순회(playlistItems, 다중 페이지)
-//   → 하이라이트 키워드 필터 → 제목의 팀명으로 DB 경기 매칭
-//   → videos.list 로 embeddable 확인 → 매칭되면 highlights, 아니면 highlight_candidates
+// Flow: traverse channel uploads (playlistItems, multiple pages)
+//   → filter by highlight keywords → match to DB matches by team names in title
+//   → check embeddability via videos.list → matched: highlights table, unmatched: highlight_candidates
 //
-// quota: 채널당 channels(1) + playlistItems(페이지수) + videos(ids/50). 일 수십~수백 unit.
+// quota: channels(1) + playlistItems(page count) + videos(ids/50) per channel. Tens to hundreds of units/day.
 
 import { createClient } from "@supabase/supabase-js";
 import { buildMatchIndex, findMatchByTitle } from "../lib/match-teams.ts";
@@ -22,14 +22,14 @@ if (!YT_KEY || !SB_URL || !SB_SERVICE) {
 
 const supabase = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false } });
 
-// 2026 월드컵 하이라이트 게시 확인된 공식 채널 (search 발굴 결과)
+// Official channels confirmed to post 2026 World Cup highlights (discovered via search)
 const CHANNELS = [
   { name: "JTBC Sports", handle: "JTBC_sports" },
   { name: "KBS 올스", channelId: "UCDIB1DOwPPe58M2fHPyVVDA" },
   { name: "KBS News", channelId: "UCcQTRi69dsVYHN3exePtZ1A" },
   { name: "JTBC News", channelId: "UCsU-I-vHLiaMfV_ceaYz5rQ" },
 ];
-// 요약 하이라이트 위주(올스의 "[3분 HL]"·"[골모음]" 포함). 양 팀명 매칭이 품질을 보장한다.
+// Focus on summary highlights (including KBS "[3-min HL]" and "[goal reel]"). Both team names must match for quality.
 const HIGHLIGHT_KEYWORDS = [
   "하이라이트",
   "highlight",
@@ -40,14 +40,14 @@ const HIGHLIGHT_KEYWORDS = [
   "풀타임",
   "hl",
 ];
-const MAX_PAGES = 4; // 채널당 최대 50×4 = 200개 업로드 스캔
+const MAX_PAGES = 4; // max 50×4 = 200 uploads scanned per channel
 
-// 수집 윈도: 킥오프 3시간 뒤 ~ 16시간 뒤 사이에 치러진 경기가 있을 때만 수집한다.
-// (하이라이트는 경기 종료 후 올라오므로 그 전엔 헛수고 / 윈도 밖이면 즉시 종료해
-//  비경기 시간·대회 종료 후 15분 크론이 자동 idle → YouTube 쿼터 절약)
-// 윈도 근거(실측 N=111): JTBC·KBS는 하루 정해진 시각 일괄 업로드라 게시 지연이
-//   킥오프 기준 중앙값 10h·최대 13h에 몰림(킥오프 3.7h 이전 0건, 16h면 100% 커버).
-//   과거 26h는 뒤쪽 ~13h가 전부 헛스캔이라 16h로 좁혀 매치당 스캔 구간을 절반으로.
+// Collection window: only collect when a match kicked off between 3h and 16h ago.
+// (Highlights are uploaded after the match ends — collecting earlier is wasteful; outside the window
+//  the 15-min cron immediately idles → saves YouTube quota.)
+// Window rationale (empirical N=111): JTBC/KBS batch-upload at set times each day, so upload delay
+//   peaks at median 10h / max 13h post-kickoff (0 uploads before 3.7h, 100% coverage by 16h).
+//   Previous 26h window had ~13h of pure dead-scan; narrowing to 16h halves the scan window per match.
 const COLLECT_FROM_MIN = 180;
 const COLLECT_TO_HOURS = 16;
 
@@ -109,18 +109,18 @@ async function embeddableMap(ids) {
   return map;
 }
 
-// ── 치지직 VOD 수집 ────────────────────────────────────────
-// 월드컵 공식 채널(verifiedMark)이 직접 올리는 하이라이트 다시보기를 수집한다.
-// 치지직은 외부 임베드를 차단하므로 항상 embeddable:false(외부 링크)로 저장.
+// ── Chzzk VOD collection ────────────────────────────────────────
+// Collects highlight replays uploaded directly by official World Cup channels (verifiedMark).
+// Chzzk blocks external embedding, so videos are always saved as embeddable:false (external link).
 const CHZZK_VOD_CHANNELS = [
   { name: "북중미 월드컵 JTBC", channelId: "8ecd602c251f30fd7f09463e9f55609f" },
   { name: "KBS스포츠", channelId: "7e9981082c184c10fcedb771e290d08b" },
   { name: "JTBC Sports", channelId: "e40bd1a9c2c43ea1dea3edf5d3fc51b0" },
 ];
 const CHZZK_UA = "Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)";
-const CHZZK_VOD_SIZE = 20; // 채널당 최신 VOD 스캔 개수
+const CHZZK_VOD_SIZE = 20; // number of latest VODs to scan per channel
 
-// "2026-06-17 12:09:18" (KST, 타임존 없음) → ISO. 파싱 실패 시 null.
+// "2026-06-17 12:09:18" (KST, no timezone) → ISO string. Returns null on parse failure.
 const parseKstDate = (s) => {
   if (!s) return null;
   const d = new Date(`${s.replace(" ", "T")}+09:00`);
@@ -143,7 +143,7 @@ async function chzzkVideos(channelId) {
 }
 
 async function main() {
-  // 스케줄 가드: 최근 경기(하이라이트가 올라올 시점)가 없으면 즉시 종료
+  // Schedule guard: exit immediately if there are no recent matches (highlights not expected yet)
   const nowMs = Date.now();
   const winFrom = new Date(nowMs - COLLECT_TO_HOURS * 3600_000).toISOString();
   const winTo = new Date(nowMs - COLLECT_FROM_MIN * 60_000).toISOString();
@@ -160,7 +160,7 @@ async function main() {
 
   const { data: teams } = await supabase.from("teams").select("id, name_ko");
   const { data: matches } = await supabase.from("matches").select("id, home_team_id, away_team_id");
-  // 이미 highlights 에 있는 영상(관리자 승인 또는 자동매칭됨)은 후보 큐에 다시 넣지 않는다.
+  // Videos already in highlights (admin-approved or auto-matched) are not re-queued as candidates.
   const { data: existingHls } = await supabase.from("highlights").select("video_id");
   const inHighlights = new Set((existingHls ?? []).map((h) => h.video_id));
   const matchesByPair = buildMatchIndex(matches);
@@ -168,7 +168,7 @@ async function main() {
   let scanned = 0;
   const highlightRows = [];
   const candidateRows = [];
-  const seenVid = new Set(); // 채널 간 중복 영상 방지
+  const seenVid = new Set(); // deduplicate videos across channels
 
   for (const ch of CHANNELS) {
     const resolved = await uploadsPlaylist(ch);
@@ -207,7 +207,7 @@ async function main() {
     console.log(`  · ${ch.name}: 하이라이트 ${items.length}건 (매칭 ${chMatched}, 미매칭 ${chCand})`);
   }
 
-  // 치지직 공식 채널 VOD 수집 (외부 임베드 차단 → embeddable:false, 외부 링크)
+  // Collect Chzzk official channel VODs (external embedding blocked → embeddable:false, external link)
   for (const ch of CHZZK_VOD_CHANNELS) {
     const vods = await chzzkVideos(ch.channelId);
     const items = vods.filter((v) => isHighlight(v.videoTitle ?? ""));
@@ -241,15 +241,15 @@ async function main() {
   }
 
   if (highlightRows.length) {
-    // ignoreDuplicates: 기존 행은 건드리지 않음(관리자가 지정한 sort_order='대표' 보존), 신규만 삽입
+    // ignoreDuplicates: leave existing rows untouched (preserves admin-assigned sort_order), insert new only
     const { error } = await supabase
       .from("highlights")
       .upsert(highlightRows, { onConflict: "match_id,source,video_id", ignoreDuplicates: true });
     if (error) { console.error("✗ highlights upsert 실패:", error.message); process.exit(1); }
   }
   if (candidateRows.length) {
-    // ignoreDuplicates: 기존 후보의 관리자 분류(review: approved/rejected)를 보존, 신규만 삽입.
-    // (이게 없으면 review 가 매 수집마다 pending 으로 리셋돼 분류한 후보가 다시 큐에 뜬다)
+    // ignoreDuplicates: preserve admin review status (approved/rejected) for existing candidates — insert new only.
+    // (Without this, review resets to 'pending' on every collection run, re-queuing already-classified candidates)
     const { error } = await supabase
       .from("highlight_candidates")
       .upsert(candidateRows, { onConflict: "source,video_id", ignoreDuplicates: true });

@@ -1,11 +1,11 @@
-// KST(Asia/Seoul) 기준 날짜/시간 포맷 & 그룹핑 유틸
+// Date/time formatting and grouping utilities based on KST (Asia/Seoul)
 
 import type { Match } from "./types";
 
 const KST = "Asia/Seoul";
 
 export function kstDateKey(iso: string): string {
-  // 'YYYY-MM-DD' (KST 기준)
+  // 'YYYY-MM-DD' (KST)
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: KST,
     year: "numeric",
@@ -16,7 +16,7 @@ export function kstDateKey(iso: string): string {
 }
 
 export function kstDateLabel(iso: string): string {
-  // '6월 16일 (월)'
+  // e.g. 'June 16 (Mon)'
   return new Intl.DateTimeFormat("ko-KR", {
     timeZone: KST,
     month: "long",
@@ -54,7 +54,7 @@ export function kstMonth(iso: string): string {
 }
 
 export function kstChip(iso: string): string {
-  // '6.16 월' (날짜 칩용 짧은 라벨)
+  // '6.16 Mon' — short label for date chip
   const md = new Intl.DateTimeFormat("ko-KR", {
     timeZone: KST,
     month: "numeric",
@@ -84,8 +84,8 @@ export function groupByKstDate(matches: Match[]): DateGroup[] {
     }
     map.get(key)!.matches.push(m);
   }
-  // 같은 날짜 안에서 진행 중(LIVE) 경기를 최상단으로 끌어올린다(여러 개면 kickoff 순 유지).
-  // 안정 정렬이라 LIVE 가 아닌 경기는 기존 kickoff 순서 그대로 → 라이브 종료 시 자동 복귀.
+  // Promote LIVE matches to the top within each date group (multiple LIVE matches retain kickoff order).
+  // Stable sort — non-LIVE matches keep their original kickoff order → auto-restored after the match ends.
   for (const g of map.values()) {
     g.matches.sort((a, b) => {
       const liveDiff = (a.status === "live" ? 0 : 1) - (b.status === "live" ? 0 : 1);
@@ -97,7 +97,7 @@ export function groupByKstDate(matches: Match[]): DateGroup[] {
   return [...map.values()];
 }
 
-// 진입 시 스크롤 대상: 오늘 또는 가장 가까운 미래 날짜 그룹의 key
+// Initial scroll target: today's group key, or the nearest future date group
 export function nearestGroupKey(groups: DateGroup[], nowIso: string): string | null {
   if (groups.length === 0) return null;
   const todayKey = kstDateKey(nowIso);
