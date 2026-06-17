@@ -1,4 +1,4 @@
-// 관리자 대시보드용 데이터 로더 (service_role).
+// Data loader for the admin dashboard (service_role).
 
 import { getAdminClient } from "./supabase-admin";
 
@@ -24,10 +24,10 @@ export interface AdminHighlight {
   matchId: number;
   homeKo: string;
   awayKo: string;
-  clean: boolean; // 제목에 양 팀명이 모두 등장하면 true
-  reviewed: boolean; // 관리자가 경고를 확인·해결 처리했는가
-  needsReview: boolean; // 경고 표시 대상 (!clean && !reviewed)
-  isPrimary: boolean; // 현재 맨 위 임베드되는 대표 영상인가
+  clean: boolean; // true when both team names appear in the title
+  reviewed: boolean; // whether an admin has acknowledged and resolved the warning
+  needsReview: boolean; // should show the warning badge (!clean && !reviewed)
+  isPrimary: boolean; // whether this is the currently featured top-embed video
 }
 
 export interface AdminCandidate {
@@ -62,10 +62,10 @@ interface HighlightRow {
 export interface HighlightGroup {
   matchId: number;
   label: string;
-  kickoffUtc: string; // 정렬용 — 최신 경기를 위로
+  kickoffUtc: string; // for sorting — most recent match first
   items: AdminHighlight[];
-  mismatchCount: number; // 오매칭 의심(⚠️) 개수
-  hasPrimary: boolean; // 임베드 대표 영상 존재 여부
+  mismatchCount: number; // number of suspected mismatches (⚠️)
+  hasPrimary: boolean; // whether a featured embed video exists
 }
 
 export interface AdminData {
@@ -81,7 +81,7 @@ export async function getAdminData(): Promise<AdminData> {
   const HL_SELECT =
     "id, title, channel, source, embeddable, sort_order, match_id, match:match_id(home:home_team_id(name_ko), away:away_team_id(name_ko))";
 
-  // reviewed 컬럼이 아직 없을 수 있어 폴백 처리
+  // reviewed column may not exist yet — fall back gracefully
   const fetchHighlights = async (): Promise<HighlightRow[]> => {
     const q = (sel: string) =>
       sb.from("highlights").select(sel).order("match_id").order("sort_order").order("id");
@@ -95,8 +95,8 @@ export async function getAdminData(): Promise<AdminData> {
     sb
       .from("matches")
       .select("id, kickoff_utc, group_label, home:home_team_id(name_ko), away:away_team_id(name_ko)")
-      .in("status", ["finished", "live"]) // 치러진 경기만 매핑 대상
-      .order("kickoff_utc", { ascending: false }) // 최신 경기를 드롭다운 위로 (후보 등록 편의)
+      .in("status", ["finished", "live"]) // only matches that have been played
+      .order("kickoff_utc", { ascending: false }) // most recent match at top of dropdown (easier candidate assignment)
       .returns<MatchRow[]>(),
     fetchHighlights(),
     sb
@@ -118,7 +118,7 @@ export async function getAdminData(): Promise<AdminData> {
     };
   });
 
-  // 경기별 대표 영상(첫 임베드 가능 youtube, sort_order 순) id 계산
+  // Compute the featured video id per match (first embeddable YouTube by sort_order)
   const rows = hlRows;
   const primaryIds = new Set<number>();
   const seen = new Set<number>();
@@ -160,7 +160,7 @@ export async function getAdminData(): Promise<AdminData> {
     thumbnailUrl: (c as unknown as { thumbnail_url: string | null }).thumbnail_url,
   }));
 
-  // 경기별 그룹 (highlights 는 이미 match_id, sort_order, id 순)
+  // Group highlights by match (already ordered by match_id, sort_order, id)
   const labelById = new Map(matches.map((m) => [m.id, m.label]));
   const kickoffById = new Map((matchRows ?? []).map((m) => [m.id, m.kickoff_utc]));
   const groupMap = new Map<number, HighlightGroup>();
@@ -181,8 +181,8 @@ export async function getAdminData(): Promise<AdminData> {
     if (h.needsReview) g.mismatchCount += 1;
     if (h.isPrimary) g.hasPrimary = true;
   }
-  // 최신 경기를 위로 (지난 경기는 보통 교정하지 않으므로) — kickoff 내림차순.
-  // ISO UTC 문자열이라 사전식 비교 = 시간순. 교정 필요 경기는 ⚠️ 배지로 식별.
+  // Most recent match first (older matches are rarely corrected) — kickoff descending.
+  // ISO UTC strings: lexicographic comparison equals chronological order. Matches needing review are flagged with ⚠️.
   const highlightGroups = [...groupMap.values()].sort((a, b) =>
     b.kickoffUtc.localeCompare(a.kickoffUtc)
   );

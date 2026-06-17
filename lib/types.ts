@@ -1,4 +1,4 @@
-// lighthigh 공용 타입
+// lighthigh shared types
 
 export type MatchStatus = "scheduled" | "live" | "finished" | "postponed";
 export type HighlightSource = "youtube" | "chzzk";
@@ -17,7 +17,7 @@ export interface Highlight {
   videoId?: string;
   title?: string;
   channel?: string;
-  embeddable: boolean; // youtube 인앱 임베드 가능 여부 (치지직은 외부 임베드 차단으로 항상 외부 링크)
+  embeddable: boolean; // whether in-app embedding is available (Chzzk blocks external embeds — always opens as external link)
   thumbnailUrl?: string;
 }
 
@@ -32,11 +32,11 @@ export interface Match {
   status: MatchStatus;
   kickoffUtc: string; // ISO
   venue?: string;
-  liveUrl?: string; // LIVE 중일 때 치지직 공식 중계 링크 (외부 링크)
+  liveUrl?: string; // official Chzzk broadcast link while the match is LIVE (external link)
   highlights: Highlight[];
 }
 
-// 라운드 한글 라벨
+// Round stage labels (Korean display strings)
 export const STAGE_LABEL: Record<string, string> = {
   GROUP_STAGE: "조별리그",
   LAST_32: "32강",

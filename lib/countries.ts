@@ -1,10 +1,10 @@
-// football-data 의 team.tla (3-letter, 예: "KOR") → 한글명 + 국기(이모지 폴백) + ISO alpha-2
-// 국기 이미지는 flagcdn.com 의 SVG 를 alpha-2 코드로 불러온다.
+// Maps football-data team.tla (3-letter code, e.g. "KOR") → Korean name + flag (emoji fallback) + ISO alpha-2
+// Flag images are loaded as SVGs from flagcdn.com using the alpha-2 code.
 
 export interface CountryInfo {
   ko: string;
-  flag: string; // 이모지 (이미지 실패 시 폴백)
-  iso2: string; // flagcdn 용 (예: "kr", 영국 구성국은 "gb-eng")
+  flag: string; // emoji (fallback when image fails to load)
+  iso2: string; // for flagcdn (e.g. "kr"; UK constituent nations use "gb-eng")
 }
 
 export const COUNTRY_BY_TLA: Record<string, CountryInfo> = {
@@ -78,13 +78,13 @@ export function countryFromTla(tla?: string | null, nameEn?: string): CountryInf
   return info ?? { ko: nameEn ?? tla ?? "미정", flag: "🏳️", iso2: "" };
 }
 
-// 국기 이미지 URL. country_code(tla) 또는 iso2 를 받는다. 매핑 없으면 null.
-// lipis/flag-icons 의 4x3 세트 — 모든 국기를 정확히 4:3(viewBox 640×480)로 정규화해
-// 제공하므로, 4:3 박스 + object-cover 로 잘림·여백·왜곡 없이 균일하게 표시된다.
+// Returns a flag image URL for a given country_code (tla) or iso2 code. Returns null when no mapping exists.
+// Uses the lipis/flag-icons 4x3 set — all flags are normalized to exactly 4:3 (viewBox 640×480),
+// so a 4:3 box + object-cover renders them uniformly without clipping, padding, or distortion.
 export function flagSrc(code?: string | null): string | null {
   if (!code) return null;
   const c = code.toLowerCase();
-  // 이미 iso2 형태(2글자 또는 gb-xxx)면 그대로, tla 면 매핑
+  // Already in iso2 form (2 chars or gb-xxx): use as-is; otherwise look up from tla
   const iso2 =
     c.length === 2 || c.startsWith("gb-")
       ? c
