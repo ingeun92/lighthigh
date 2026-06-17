@@ -1,0 +1,30 @@
+name: debug-chzzk
+# 일회용 진단: GitHub Actions runner(데이터센터 IP)에서 치지직 비공식 API가
+# 호출되는지 확인. 검증 후 삭제 예정.
+# push 트리거: 새 워크플로는 default branch(main)에 없으면 workflow_dispatch 가
+# 목록에 안 떠서, dev push 로 곧장 돌린다. 검증 후 파일째 삭제.
+on:
+  push:
+    branches: [dev]
+    paths: [".github/workflows/debug-chzzk.yml"]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: runner 공인 IP
+        run: curl -s https://api.ipify.org && echo ""
+      - name: live-detail (JTBC 월드컵)
+        run: |
+          curl -s -w "\nHTTP %{http_code}\n" \
+            "https://api.chzzk.naver.com/service/v2/channels/8ecd602c251f30fd7f09463e9f55609f/live-detail" \
+            -H "User-Agent: Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)" \
+            -H "Accept: application/json" | head -c 1200
+          echo ""
+      - name: search/lives (월드컵)
+        run: |
+          curl -s -w "\nHTTP %{http_code}\n" \
+            "https://api.chzzk.naver.com/service/v1/search/lives?keyword=%EC%9B%94%EB%93%9C%EC%BB%B5&size=2" \
+            -H "User-Agent: Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)" \
+            -H "Accept: application/json" | head -c 600
+          echo ""
