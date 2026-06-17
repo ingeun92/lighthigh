@@ -2,9 +2,9 @@
 
 # lighthigh ⚽
 
-**One tap from the schedule to the World Cup highlight.**
+**흩어진 월드컵 하이라이트를, 일정표에서 한 번의 탭으로.**
 
-Browse the 2026 FIFA World Cup schedule at a glance on mobile and jump straight to match highlights.
+2026 FIFA 월드컵 경기 일정을 모바일에서 한 눈에 보고, 하이라이트로 바로 연결합니다.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-149ECA?logo=react)
@@ -14,91 +14,89 @@ Browse the 2026 FIFA World Cup schedule at a glance on mobile and jump straight 
 
 </div>
 
-## Problem
+## 무엇을 해결하나
 
-World Cup highlights are scattered across **Chzzk, JTBC, and KBS YouTube** channels, requiring a separate search after every match. lighthigh connects **schedule → highlight** in a single tap and returns you smoothly to where you left off.
+한국에서 월드컵 파생영상 권한은 네이버(치지직)뿐이고, 하이라이트는 **치지직·JTBC·KBS 유튜브**에 흩어져 있어 매번 검색하는 "추가 사이클"이 필요합니다. lighthigh는 **일정 → 하이라이트**를 한 동작으로 잇고, 시청 후 보던 위치로 매끄럽게 복귀시킵니다.
 
-## Features
+## 핵심 기능
 
-- 📅 **Date-grouped schedule** — KST timezone, scrollable calendar date strip with arrows, round/group labels, flags, and scores
-- ▶️ **Instant highlights** — embeddable videos play in-app; Chzzk and non-embeddable videos open as branded external links. Multiple highlights scroll as a list
-- 🙈 **Spoiler protection** — scores are blurred by default; tap "Show result" to reveal (card and modal stay in sync), with a global toggle at the top
-- 🔴 **Live match promotion** — LIVE matches auto-rise to the top of their date group with a pulsing indicator and a direct Chzzk broadcast button
-- 🔁 **Smooth navigation** — SPA routing + scroll restoration returns you to your place after closing a highlight
-- 📱 **Mobile-first + PWA** — installable to the home screen, "Cloud Dancer" (PANTONE 2026) light theme
-- 🛠 **Admin panel** — correct mis-matched highlights (collapsible per match), set featured video, approve/reject candidates, manual add
+- 📅 **날짜별 경기 일정** — KST 기준, 달력형 날짜 스트립(좌우 화살표·스크롤), 라운드/조·국기·스코어
+- ▶️ **하이라이트 바로보기** — 임베드 가능 영상은 인앱 재생, 그 외/치지직은 외부 딥링크. 다수 하이라이트는 목록 스크롤
+- 🙈 **스포일러 가림** — 점수를 기본 블러 처리, "결과 보기"로 공개(카드·팝업 동기화), 상단 토글로 일괄 전환
+- 🔁 **매끄러운 왕복** — SPA 라우팅 + 스크롤 복원, 외부 이동 후 보던 자리로 복귀
+- 📱 **모바일 우선 + PWA** — 홈 화면 추가, "Cloud Dancer"(PANTONE 2026) 라이트 테마
+- 🛠 **관리자 페이지** — 하이라이트 오매칭 교정(경기별 접이식)·대표 영상 지정·후보 승인·수동 추가
 
-## Tech Stack
+## 기술 스택
 
 - **Next.js 16** (App Router) · React 19 · TypeScript · Tailwind CSS v4 · NanumSquare
-- **Supabase** (Postgres + RLS) — schedule and highlight storage
-- Data: **football-data.org** (schedule/results, free tier) · **YouTube Data API v3** (highlight collection) · **Chzzk API** (live stream linking and VOD collection)
+- **Supabase** (Postgres + RLS) — 일정/하이라이트 저장
+- 데이터: **football-data.org**(일정/결과, 무료) · **YouTube Data API v3**(하이라이트 수집)
 
-## Architecture
+## 아키텍처
 
 ```mermaid
 flowchart LR
   FD[football-data.org] -->|sync:matches| DB[(Supabase)]
-  YT[YouTube Data API<br/>JTBC · KBS] -->|collect:highlights<br/>auto-match| DB
-  CHZZK[Chzzk API<br/>live + VOD] -->|sync:matches<br/>collect:highlights| DB
+  YT[YouTube Data API<br/>JTBC·올스·KBS News] -->|collect:highlights<br/>자동 매칭| DB
   DB <--> APP[Next.js PWA]
-  ADMIN[/admin] -->|correct · feature · approve| DB
-  APP --> U((User))
+  ADMIN[관리자 /admin] -->|교정·대표지정·승인| DB
+  APP --> U((사용자))
 ```
 
-- **Schedule sync**: football-data WC matches/results → `matches`/`teams` upsert (5-min cron, active-window guard)
-- **Highlight collection**: official channel uploads → keyword filter → team-name match → embed check → `highlights` (matched) / `highlight_candidates` (unmatched). Runs every 15 min, skips when no recent match.
-- **Chzzk live linking**: searches "월드컵" lives via `search/lives` (works from overseas IPs), links verified official channels to current LIVE matches, clears on match end
-- **Semi-automated ops**: auto-collection + admin review/correction for accuracy
+- **일정 동기화**: football-data WC 경기/결과 → `matches`/`teams` upsert
+- **하이라이트 수집**: 공식 채널 업로드 → 키워드 필터 → 제목의 팀명으로 경기 **자동 매칭** → 임베드 여부 확인 → `highlights`(매칭)/`highlight_candidates`(미매칭)
+- **반자동 운영**: 자동 수집 + 관리자 검토/교정으로 정확도 확보
 
-## Quick Start
+## 빠른 시작
 
 ```bash
 pnpm install
-cp .env.local.example .env.local   # fill in keys (see table below)
+cp .env.local.example .env.local   # 키 입력 (아래 표 참고)
 pnpm dev                            # http://localhost:3000
 ```
 
-Apply the Supabase schema by pasting [`supabase/schema.sql`](supabase/schema.sql) into the SQL Editor.  
-Without keys, the UI falls back to mock data in `lib/mock-data.ts`.
+Supabase 스키마는 [`supabase/schema.sql`](supabase/schema.sql)을 SQL Editor에 붙여넣어 적용합니다.
+키가 없으면 `lib/mock-data.ts`의 목 데이터로 UI가 동작합니다.
 
-### Environment Variables
+### 환경 변수
 
-| Variable | Description |
+| 변수 | 설명 |
 |---|---|
-| `FOOTBALL_DATA_TOKEN` | football-data.org API token (schedule/results) |
-| `YOUTUBE_API_KEY` | YouTube Data API v3 key (highlight collection) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (public read) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key (sync and admin writes) |
-| `ADMIN_TOKEN` | Token protecting `/admin` (omit for unauthenticated local access) |
+| `FOOTBALL_DATA_TOKEN` | football-data.org API 토큰(일정/결과) |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 키(하이라이트 수집) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon 키(공개 읽기) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role 키(동기화·관리자 쓰기) |
+| `ADMIN_TOKEN` | `/admin` 보호용 토큰(미설정 시 로컬 무인증 접근) |
+| `APIFOOTBALL_KEY` | (선택) 라이브 스코어 전환용 |
 
-### Scripts
+### 스크립트
 
-| Command | Description |
+| 명령 | 설명 |
 |---|---|
-| `pnpm dev` / `build` / `start` | Development / build / production |
+| `pnpm dev` / `build` / `start` | 개발 / 빌드 / 프로덕션 |
 | `pnpm lint` | ESLint |
-| `pnpm verify:sources` | Verify data sources (WC schedule, embed ratio) |
-| `pnpm sync:matches` | Sync football-data schedule → Supabase |
-| `pnpm collect:highlights` | Collect YouTube & Chzzk highlights with auto-matching |
+| `pnpm verify:sources` | 데이터 소스 점검(WC 일정·임베드 가능 비율) |
+| `pnpm sync:matches` | football-data → Supabase 일정 동기화 |
+| `pnpm collect:highlights` | YouTube 하이라이트 수집·자동 매칭 |
 
-## Admin (`/admin`)
+## 관리자 (`/admin`)
 
-- **Highlight correction** — collapsible per match; mis-match suspects (⚠️) auto-expand
-- **Feature video** — promote an embed to the top slot with "Move to top"
-- **Approve / reject candidates** — link auto-unmatched videos to the correct match
-- **Manual add** — attach a Chzzk or YouTube URL directly to a match
+- **하이라이트 교정** — 경기별 접이식, 오매칭 의심(⚠️) 경기만 자동 펼침
+- **대표 지정** — 앱 맨 위 임베드 영상을 "맨 위로"로 교체
+- **후보 승인 / 거부** — 자동 매칭 안 된 영상을 경기에 연결
+- **수동 추가** — 치지직/유튜브 URL을 경기에 직접 연결
 
-> Set `ADMIN_TOKEN` to require token authentication at `/admin/login`.
+> `ADMIN_TOKEN`을 설정하면 `/admin/login`에서 토큰 인증을 요구합니다.
 
-## Docs
+## 문서
 
-- [`docs/PRD.md`](docs/PRD.md) — product requirements
-- [`docs/wireframe.md`](docs/wireframe.md) — mobile wireframes and screen flow
+- [`docs/PRD.md`](docs/PRD.md) — 제품 요구사항
+- [`docs/wireframe.md`](docs/wireframe.md) — 모바일 와이어프레임·화면 흐름
 
-## License
+## 라이선스
 
 [MIT](LICENSE) © ingeun92
 
-> Videos are provided as **links and embeds only** — no re-hosting. Please comply with YouTube/Chzzk terms of service and broadcast rights policies.
+> 영상은 재호스팅 없이 공식 출처로 **링크·임베드만** 제공합니다. YouTube/치지직 약관 및 중계권 정책을 준수하세요.
