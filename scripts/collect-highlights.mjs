@@ -41,11 +41,14 @@ const HIGHLIGHT_KEYWORDS = [
 ];
 const MAX_PAGES = 4; // 채널당 최대 50×4 = 200개 업로드 스캔
 
-// 수집 윈도: 킥오프 90분 뒤 ~ 26시간 뒤 사이에 치러진 경기가 있을 때만 수집한다.
+// 수집 윈도: 킥오프 3시간 뒤 ~ 16시간 뒤 사이에 치러진 경기가 있을 때만 수집한다.
 // (하이라이트는 경기 종료 후 올라오므로 그 전엔 헛수고 / 윈도 밖이면 즉시 종료해
 //  비경기 시간·대회 종료 후 15분 크론이 자동 idle → YouTube 쿼터 절약)
-const COLLECT_FROM_MIN = 90;
-const COLLECT_TO_HOURS = 26;
+// 윈도 근거(실측 N=111): JTBC·KBS는 하루 정해진 시각 일괄 업로드라 게시 지연이
+//   킥오프 기준 중앙값 10h·최대 13h에 몰림(킥오프 3.7h 이전 0건, 16h면 100% 커버).
+//   과거 26h는 뒤쪽 ~13h가 전부 헛스캔이라 16h로 좁혀 매치당 스캔 구간을 절반으로.
+const COLLECT_FROM_MIN = 180;
+const COLLECT_TO_HOURS = 16;
 
 const yt = async (path, params) => {
   const qs = new URLSearchParams({ ...params, key: YT_KEY }).toString();
