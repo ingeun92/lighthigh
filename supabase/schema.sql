@@ -27,6 +27,7 @@ create table if not exists matches (
   status        match_status not null default 'scheduled',
   kickoff_utc   timestamptz not null,
   venue         text,
+  live_url      text,                        -- LIVE 중일 때 치지직 공식 중계 링크 (sync 가 자동 채움/비움)
   updated_at    timestamptz not null default now()
 );
 create index if not exists matches_kickoff_idx on matches (kickoff_utc);
@@ -99,3 +100,7 @@ create policy "public read highlights" on highlights for select using (is_approv
 -- 후보 큐는 비공개 (관리자는 service_role 로 접근)
 
 grant select on match_list to anon, authenticated;
+
+-- ── 마이그레이션 (이미 배포된 DB 에 안전하게 재적용) ──────────
+-- 기존 matches 테이블에 LIVE 중계 링크 컬럼 추가 (create table if not exists 는 컬럼을 갱신하지 않음)
+alter table matches add column if not exists live_url text;
