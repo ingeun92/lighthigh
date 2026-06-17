@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { Match } from "@/lib/types";
 import {
   groupByKstDate,
@@ -20,6 +21,10 @@ export default function ScheduleList({
   matches: Match[];
   nowIso: string;
 }) {
+  const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
+  const refresh = () => startRefresh(() => router.refresh());
+
   const groups = useMemo(() => groupByKstDate(matches), [matches]);
   const todayKey = kstDateKey(nowIso);
 
@@ -89,18 +94,30 @@ export default function ScheduleList({
       <div className="sticky top-0 z-20 -mx-5 bg-canvas/95 px-5 pb-2 pt-2 backdrop-blur">
         <div className="mb-1.5 flex items-center justify-between">
           <p className="text-xs font-bold text-muted">{activeMonth}</p>
-          <button
-            type="button"
-            onClick={() => setHideSpoilers((v) => !v)}
-            aria-pressed={hideSpoilers}
-            className={`rounded-full border px-2.5 py-1 text-[0.7rem] font-bold transition-colors ${
-              hideSpoilers
-                ? "border-accent/30 bg-accent-soft text-accent"
-                : "border-line bg-card text-muted"
-            }`}
-          >
-            {hideSpoilers ? "🙈 점수 가림" : "👁 점수 표시"}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={isRefreshing}
+              aria-label="새로고침"
+              title="최신 일정·점수·하이라이트 불러오기"
+              className="grid h-[1.875rem] w-[1.875rem] shrink-0 place-items-center rounded-full border border-line bg-card text-muted transition-colors active:bg-canvas disabled:opacity-60"
+            >
+              <span className={`text-sm leading-none ${isRefreshing ? "inline-block animate-spin" : ""}`}>↻</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setHideSpoilers((v) => !v)}
+              aria-pressed={hideSpoilers}
+              className={`rounded-full border px-2.5 py-1 text-[0.7rem] font-bold transition-colors ${
+                hideSpoilers
+                  ? "border-accent/30 bg-accent-soft text-accent"
+                  : "border-line bg-card text-muted"
+              }`}
+            >
+              {hideSpoilers ? "🙈 점수 가림" : "👁 점수 표시"}
+            </button>
+          </div>
         </div>
 
         {/* 화살표를 날짜 바깥쪽에 배치 (겹침 방지) */}
