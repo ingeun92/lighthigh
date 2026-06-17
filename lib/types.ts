@@ -17,7 +17,7 @@ export interface Highlight {
   videoId?: string;
   title?: string;
   channel?: string;
-  embeddable: boolean; // youtube 인앱 임베드 가능 여부
+  embeddable: boolean; // youtube 임베드 가능 여부 (치지직은 source 기준 canEmbed 에서 판별)
   thumbnailUrl?: string;
 }
 
