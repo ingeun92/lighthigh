@@ -10,6 +10,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { buildMatchIndex, findMatchByTitle } from "../lib/match-teams.ts";
+import { CHZZK_OFFICIAL_CHANNELS } from "../lib/chzzk-channels.ts";
 
 const YT_KEY = process.env.YOUTUBE_API_KEY?.trim();
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -110,13 +111,8 @@ async function embeddableMap(ids) {
 }
 
 // ── Chzzk VOD collection ────────────────────────────────────────
-// Collects highlight replays uploaded directly by official World Cup channels (verifiedMark).
+// Collects highlight replays uploaded directly by official World Cup channels (CHZZK_OFFICIAL_CHANNELS).
 // Chzzk blocks external embedding, so videos are always saved as embeddable:false (external link).
-const CHZZK_VOD_CHANNELS = [
-  { name: "북중미 월드컵 JTBC", channelId: "8ecd602c251f30fd7f09463e9f55609f" },
-  { name: "KBS스포츠", channelId: "7e9981082c184c10fcedb771e290d08b" },
-  { name: "JTBC Sports", channelId: "e40bd1a9c2c43ea1dea3edf5d3fc51b0" },
-];
 const CHZZK_UA = "Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)";
 const CHZZK_VOD_SIZE = 20; // number of latest VODs to scan per channel
 
@@ -208,7 +204,7 @@ async function main() {
   }
 
   // Collect Chzzk official channel VODs (external embedding blocked → embeddable:false, external link)
-  for (const ch of CHZZK_VOD_CHANNELS) {
+  for (const ch of CHZZK_OFFICIAL_CHANNELS) {
     const vods = await chzzkVideos(ch.channelId);
     const items = vods.filter((v) => isHighlight(v.videoTitle ?? ""));
     if (items.length === 0) { console.log(`  · ${ch.name}(치지직): 하이라이트 0건`); continue; }
