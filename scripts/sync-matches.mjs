@@ -7,7 +7,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { countryFromTla } from "../lib/countries.ts";
 import { buildMatchIndex, findMatchByTitle } from "../lib/match-teams.ts";
-import { CHZZK_OFFICIAL_CHANNEL_IDS } from "../lib/chzzk-channels.ts";
+import { CHZZK_OFFICIAL_CHANNELS } from "../lib/chzzk-channels.ts";
 
 const FD_TOKEN = process.env.FOOTBALL_DATA_TOKEN?.trim();
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,45 +35,45 @@ const STATUS_MAP = {
 const groupLabel = (g) => (g ? g.replace("GROUP_", "") + "조" : null);
 
 // ── Chzzk LIVE auto-linking ──────────────────────────────
-// Chzzk (Naver) holds domestic new-media broadcast rights for the World Cup → streams JTBC/KBS feeds
-// on official Chzzk channels. We search "월드컵" (World Cup) lives via search/lives and keep only the
-// official broadcaster channels (CHZZK_OFFICIAL_CHANNEL_IDS) to exclude unauthorized re-streams AND
-// "같이 보기" (watch-together) streams by verified streamers — verifiedMark alone passes those through.
-//   ※ The live-detail endpoint returns "overseas viewing unavailable" (code 9004), blocking GitHub Actions
-//     and other foreign IPs; search/lives returns verified official-channel lives from overseas as well.
+// Chzzk (Naver) holds domestic new-media broadcast rights for the World Cup → official broadcasters
+// (JTBC/KBS) stream their feeds on the channels in CHZZK_OFFICIAL_CHANNELS. We poll each official channel's
+// live-status directly and link its URL to the DB match parsed from the live title.
+//   ※ Why poll per channel instead of the keyword search: the live-detail endpoint is geo-blocked (code
+//     9004) for GitHub Actions / overseas IPs, and search/lives ranks by popularity so official channels
+//     can be pushed out of the result window by "같이 보기" (watch-together) streamers. The polling/v3
+//     live-status endpoint returns title+status for a known channel ID even from overseas, and querying
+//     only whitelisted channel IDs inherently excludes re-streams and watch-together streams.
 const CHZZK_UA = "Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)";
-const CHZZK_SEARCH_SIZE = 30;
 
-async function chzzkSearchLives(keyword) {
+// Returns the current live title for an official channel, or null when it is not currently live (status
+// is "CLOSE"/absent — note a stale title lingers on a closed channel, so the status gate is required).
+async function chzzkChannelLiveTitle(channelId) {
   try {
     const r = await fetch(
-      `https://api.chzzk.naver.com/service/v1/search/lives` +
-        `?keyword=${encodeURIComponent(keyword)}&size=${CHZZK_SEARCH_SIZE}`,
+      `https://api.chzzk.naver.com/polling/v3/channels/${channelId}/live-status`,
       { headers: { "User-Agent": CHZZK_UA, Accept: "application/json" } }
     );
-    if (!r.ok) return [];
+    if (!r.ok) return null;
     const j = await r.json();
-    return j?.content?.data ?? [];
+    const c = j?.content;
+    return c?.status === "OPEN" ? c.liveTitle ?? null : null;
   } catch {
-    return [];
+    return null;
   }
 }
 
-// Searches "월드컵" (World Cup) lives, links official verified-channel streams to current LIVE matches,
-// and clears the link for finished matches. (Independent best-effort, separate from football-data sync)
+// Polls each official broadcaster channel, links its stream to the current LIVE match parsed from the
+// live title, and clears the link for finished matches. (Independent best-effort, separate from football-data sync)
 async function syncChzzkLive() {
-  // 1) Search "월드컵" (World Cup) lives → keep only official broadcaster channels by channel ID
-  //    (excludes unauthorized re-streams and verified streamers' "같이 보기" watch-together streams)
-  const results = await chzzkSearchLives("월드컵");
-  const officialLives = results
-    .map((it) => ({
-      channelId: it.live?.channelId ?? it.channel?.channelId,
-      name: it.channel?.channelName ?? "",
-      liveTitle: it.live?.liveTitle ?? "",
-    }))
-    .filter(
-      (x) => x.channelId && x.liveTitle && CHZZK_OFFICIAL_CHANNEL_IDS.has(x.channelId)
-    );
+  // 1) Poll each official broadcaster channel directly for its current live (title + OPEN status).
+  const officialLives = (
+    await Promise.all(
+      CHZZK_OFFICIAL_CHANNELS.map(async (ch) => {
+        const liveTitle = await chzzkChannelLiveTitle(ch.channelId);
+        return liveTitle ? { channelId: ch.channelId, name: ch.name, liveTitle } : null;
+      })
+    )
+  ).filter(Boolean);
 
   // 2) Match live title team names to matches → { matchId: Chzzk live URL }
   const liveUrlByMatch = new Map();

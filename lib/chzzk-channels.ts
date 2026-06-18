@@ -13,11 +13,7 @@ export interface ChzzkChannel {
 
 export const CHZZK_OFFICIAL_CHANNELS: ChzzkChannel[] = [
   { name: "북중미 월드컵 JTBC", channelId: "8ecd602c251f30fd7f09463e9f55609f" },
+  { name: "북중미 월드컵 KBS2", channelId: "4df4756104a54e28e967bff6dc08e319" },
   { name: "KBS스포츠", channelId: "7e9981082c184c10fcedb771e290d08b" },
   { name: "JTBC Sports", channelId: "e40bd1a9c2c43ea1dea3edf5d3fc51b0" },
 ];
-
-// Set of official channel IDs for O(1) membership checks when filtering live search results.
-export const CHZZK_OFFICIAL_CHANNEL_IDS = new Set(
-  CHZZK_OFFICIAL_CHANNELS.map((c) => c.channelId)
-);

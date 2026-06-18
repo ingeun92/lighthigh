@@ -22,13 +22,20 @@ export function buildMatchIndex(matches: MatchLite[] | null | undefined): Map<st
   return byPair;
 }
 
+// Strip all whitespace so titles match team names regardless of spacing, e.g. the official broadcast
+// title "남아프리카 공화국" (spaced) still matches the DB name_ko "남아프리카공화국" (unspaced).
+const stripSpaces = (s: string) => s.replace(/\s+/g, "");
+
 // Find a match by team names appearing in the title (longer names matched first). Returns null on failure.
 export function findMatchByTitle(
   title: string,
   teams: TeamLite[] | null | undefined,
   matchesByPair: Map<string, number>
 ): number | null {
-  const present = (teams ?? []).filter((t) => t.name_ko && title.includes(t.name_ko));
+  const normTitle = stripSpaces(title);
+  const present = (teams ?? []).filter(
+    (t) => t.name_ko && normTitle.includes(stripSpaces(t.name_ko))
+  );
   present.sort((a, b) => (b.name_ko?.length ?? 0) - (a.name_ko?.length ?? 0));
   for (let i = 0; i < present.length; i++) {
     for (let j = i + 1; j < present.length; j++) {
