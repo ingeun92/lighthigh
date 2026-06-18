@@ -7,6 +7,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { countryFromTla } from "../lib/countries.ts";
 import { buildMatchIndex, findMatchByTitle } from "../lib/match-teams.ts";
+import { CHZZK_OFFICIAL_CHANNEL_IDS } from "../lib/chzzk-channels.ts";
 
 const FD_TOKEN = process.env.FOOTBALL_DATA_TOKEN?.trim();
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,8 +36,9 @@ const groupLabel = (g) => (g ? g.replace("GROUP_", "") + "조" : null);
 
 // ── Chzzk LIVE auto-linking ──────────────────────────────
 // Chzzk (Naver) holds domestic new-media broadcast rights for the World Cup → streams JTBC/KBS feeds
-// on official Chzzk channels. We search "월드컵" (World Cup) lives via search/lives and trust only
-// channels with verifiedMark (official badge) to exclude unauthorized re-streams.
+// on official Chzzk channels. We search "월드컵" (World Cup) lives via search/lives and keep only the
+// official broadcaster channels (CHZZK_OFFICIAL_CHANNEL_IDS) to exclude unauthorized re-streams AND
+// "같이 보기" (watch-together) streams by verified streamers — verifiedMark alone passes those through.
 //   ※ The live-detail endpoint returns "overseas viewing unavailable" (code 9004), blocking GitHub Actions
 //     and other foreign IPs; search/lives returns verified official-channel lives from overseas as well.
 const CHZZK_UA = "Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)";
@@ -60,16 +62,18 @@ async function chzzkSearchLives(keyword) {
 // Searches "월드컵" (World Cup) lives, links official verified-channel streams to current LIVE matches,
 // and clears the link for finished matches. (Independent best-effort, separate from football-data sync)
 async function syncChzzkLive() {
-  // 1) Search "월드컵" (World Cup) lives → only verifiedMark official channels (exclude unauthorized re-streams)
+  // 1) Search "월드컵" (World Cup) lives → keep only official broadcaster channels by channel ID
+  //    (excludes unauthorized re-streams and verified streamers' "같이 보기" watch-together streams)
   const results = await chzzkSearchLives("월드컵");
   const officialLives = results
-    .filter((it) => it.channel?.verifiedMark)
     .map((it) => ({
       channelId: it.live?.channelId ?? it.channel?.channelId,
       name: it.channel?.channelName ?? "",
       liveTitle: it.live?.liveTitle ?? "",
     }))
-    .filter((x) => x.channelId && x.liveTitle);
+    .filter(
+      (x) => x.channelId && x.liveTitle && CHZZK_OFFICIAL_CHANNEL_IDS.has(x.channelId)
+    );
 
   // 2) Match live title team names to matches → { matchId: Chzzk live URL }
   const liveUrlByMatch = new Map();
