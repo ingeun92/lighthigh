@@ -17,8 +17,3 @@ export const CHZZK_OFFICIAL_CHANNELS: ChzzkChannel[] = [
   { name: "KBS스포츠", channelId: "7e9981082c184c10fcedb771e290d08b" },
   { name: "JTBC Sports", channelId: "e40bd1a9c2c43ea1dea3edf5d3fc51b0" },
 ];
-
-// Set of official channel IDs for O(1) membership checks when filtering live search results.
-export const CHZZK_OFFICIAL_CHANNEL_IDS = new Set(
-  CHZZK_OFFICIAL_CHANNELS.map((c) => c.channelId)
-);
