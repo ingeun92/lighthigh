@@ -42,7 +42,9 @@ const groupLabel = (g) => (g ? g.replace("GROUP_", "") + "조" : null);
 //   ※ The live-detail endpoint returns "overseas viewing unavailable" (code 9004), blocking GitHub Actions
 //     and other foreign IPs; search/lives returns verified official-channel lives from overseas as well.
 const CHZZK_UA = "Mozilla/5.0 (compatible; lighthigh/1.0; +https://lighthigh.today)";
-const CHZZK_SEARCH_SIZE = 30;
+// Keep this generous: official channels can be outranked by popular streamers' "같이 보기" lives in the
+// keyword search, so a small page size can drop them entirely (observed JTBC missing from the top 30).
+const CHZZK_SEARCH_SIZE = 50;
 
 async function chzzkSearchLives(keyword) {
   try {
