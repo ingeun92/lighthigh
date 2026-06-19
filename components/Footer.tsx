@@ -21,8 +21,8 @@ const LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-canvas/85 backdrop-blur-md">
-      <div className="mx-auto flex h-12 w-full max-w-lg items-center justify-between px-5 pb-[env(safe-area-inset-bottom)]">
+    <footer className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-canvas/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+      <div className="mx-auto flex h-12 w-full max-w-lg items-center justify-between px-5">
         <span className="text-xs text-muted">© 2026 ingeun92</span>
         <nav className="flex items-center gap-1">
           {LINKS.map(({ label, href, path }) => (
