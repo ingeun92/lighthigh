@@ -99,7 +99,7 @@ export default function MatchCard({
                   aria-label="결과 보기"
                   className="absolute inset-0 grid place-items-center"
                 >
-                  <span className="whitespace-nowrap rounded-full bg-ink/80 px-2.5 py-1 text-[0.6rem] font-bold text-white">
+                  <span className="whitespace-nowrap rounded-full bg-ink/80 dark:bg-black/60 px-2.5 py-1 text-[0.6rem] font-bold text-white">
                     결과 보기
                   </span>
                 </button>

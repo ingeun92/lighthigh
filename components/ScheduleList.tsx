@@ -13,6 +13,7 @@ import {
 } from "@/lib/format";
 import MatchCard from "./MatchCard";
 import HighlightViewer from "./HighlightViewer";
+import ThemeToggle from "./ThemeToggle";
 
 export default function ScheduleList({
   matches,
@@ -95,6 +96,7 @@ export default function ScheduleList({
         <div className="mb-1.5 flex items-center justify-between">
           <p className="text-xs font-bold text-muted">{activeMonth}</p>
           <div className="flex items-center gap-1.5">
+            <ThemeToggle />
             <button
               type="button"
               onClick={refresh}

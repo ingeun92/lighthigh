@@ -1,6 +1,9 @@
 @import url("https://cdn.jsdelivr.net/gh/moonspam/NanumSquare@2.0/nanumsquare.css");
 @import "tailwindcss";
 
+/* Class-based dark mode (manual toggle): `.dark` on <html> activates dark: variants */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ── lighthigh — Cloud Dancer (PANTONE 2026) 라이트 팔레트 ── */
 @theme {
   --color-canvas: #f0eee9; /* Cloud Dancer — 따뜻한 화이트 캔버스 */
@@ -13,6 +16,36 @@
   --color-live: #cf5a4a; /* 부드러운 코랄레드 — 진행중만 */
 
   --font-sans: "NanumSquareAc", "NanumSquare", sans-serif;
+}
+
+/* ── 다크 팔레트 ── Cloud Dancer/Blue Fusion 감성을 유지한 따뜻한 다크
+   (순수 블랙 대신 ink 색조의 웜 다크 + 가독성을 위해 살짝 밝힌 Blue Fusion) */
+.dark {
+  --color-canvas: #1b1916; /* 웜 근접 블랙 캔버스 */
+  --color-card: #262320; /* 한 단계 밝은 웜 다크 카드 */
+  --color-ink: #ece8e1; /* 웜 오프화이트 (텍스트) */
+  --color-muted: #9b948a; /* 웜 회색 (다크 위 대비 확보) */
+  --color-line: rgba(236, 232, 225, 0.12);
+  --color-accent: #6a90b0; /* Blue Fusion을 다크 배경용으로 라이트닝 */
+  --color-accent-soft: #233845; /* 딥 슬레이트 (점수 가림 토글 등) */
+  --color-live: #df6f5d; /* 살짝 밝힌 코랄레드 */
+
+  color-scheme: dark;
+}
+
+/* 강제 라이트 영역 (예: admin) — 다크 토글과 무관하게 라이트 팔레트로 고정.
+   .dark 하위에 있어도 토큰을 라이트 값으로 재선언해 덮어쓴다. */
+.force-light {
+  --color-canvas: #f0eee9;
+  --color-card: #ffffff;
+  --color-ink: #211f1b;
+  --color-muted: #8c877d;
+  --color-line: rgba(33, 31, 27, 0.1);
+  --color-accent: #3f5e78;
+  --color-accent-soft: #e7edf1;
+  --color-live: #cf5a4a;
+
+  color-scheme: light;
 }
 
 html {
@@ -50,6 +83,13 @@ body {
   box-shadow:
     0 1px 2px rgba(33, 31, 27, 0.04),
     0 8px 20px -12px rgba(33, 31, 27, 0.18);
+}
+
+/* 다크 테마: 그림자 대신 은은한 깊이감 */
+.dark .card-soft {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 8px 20px -12px rgba(0, 0, 0, 0.6);
 }
 
 /* 진행중 신호 */
