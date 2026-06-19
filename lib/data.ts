@@ -4,6 +4,7 @@
 import type { Match, MatchStatus, Highlight } from "./types";
 import { MOCK_MATCHES } from "./mock-data";
 import { getSupabase } from "./supabase";
+import { KNOCKOUT_SLOTS } from "./bracket-2026";
 
 interface TeamRow {
   name_ko: string | null;
@@ -23,6 +24,7 @@ interface HighlightRow {
 }
 interface MatchRow {
   id: number;
+  external_id: string | null;
   stage: string | null;
   group_label: string | null;
   home_score: number | null;
@@ -36,9 +38,11 @@ interface MatchRow {
   highlights: HighlightRow[] | null;
 }
 
-const team = (t: TeamRow | null) => ({
-  nameKo: t?.name_ko ?? t?.name_en ?? "미정",
-  nameEn: t?.name_en ?? "TBD",
+// `slotLabel` is the bracket placeholder (e.g. "A조 1위") shown for undecided
+// knockout matches before the feeding team is known. Falls back to "미정".
+const team = (t: TeamRow | null, slotLabel?: string) => ({
+  nameKo: t?.name_ko ?? t?.name_en ?? slotLabel ?? "미정",
+  nameEn: t?.name_en ?? slotLabel ?? "TBD",
   countryCode: t?.country_code ?? "",
   flag: t?.flag_url ?? "🏳️",
 });
@@ -54,12 +58,13 @@ function mapRow(r: MatchRow): Match {
     embeddable: h.embeddable,
     thumbnailUrl: h.thumbnail_url ?? undefined,
   }));
+  const slot = r.external_id ? KNOCKOUT_SLOTS[r.external_id] : undefined;
   return {
     id: String(r.id),
     stage: r.stage ?? "",
     groupLabel: r.group_label ?? undefined,
-    home: team(r.home),
-    away: team(r.away),
+    home: team(r.home, slot?.home),
+    away: team(r.away, slot?.away),
     homeScore: r.home_score ?? undefined,
     awayScore: r.away_score ?? undefined,
     status: r.status,
@@ -77,7 +82,7 @@ export async function getMatches(): Promise<Match[]> {
   const { data, error } = await supabase
     .from("matches")
     .select(
-      `id, stage, group_label, home_score, away_score, status, kickoff_utc, venue, live_url,
+      `id, external_id, stage, group_label, home_score, away_score, status, kickoff_utc, venue, live_url,
        home:home_team_id ( name_ko, name_en, country_code, flag_url ),
        away:away_team_id ( name_ko, name_en, country_code, flag_url ),
        highlights ( id, source, url, video_id, title, channel, embeddable, thumbnail_url )`
