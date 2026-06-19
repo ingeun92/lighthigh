@@ -33,6 +33,21 @@
   color-scheme: dark;
 }
 
+/* 강제 라이트 영역 (예: admin) — 다크 토글과 무관하게 라이트 팔레트로 고정.
+   .dark 하위에 있어도 토큰을 라이트 값으로 재선언해 덮어쓴다. */
+.force-light {
+  --color-canvas: #f0eee9;
+  --color-card: #ffffff;
+  --color-ink: #211f1b;
+  --color-muted: #8c877d;
+  --color-line: rgba(33, 31, 27, 0.1);
+  --color-accent: #3f5e78;
+  --color-accent-soft: #e7edf1;
+  --color-live: #cf5a4a;
+
+  color-scheme: light;
+}
+
 html {
   -webkit-tap-highlight-color: transparent;
 }
