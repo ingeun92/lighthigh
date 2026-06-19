@@ -26,7 +26,6 @@
 - 🙈 **스포일러 가림** — 점수를 기본 블러 처리, "결과 보기"로 공개(카드·팝업 동기화), 상단 토글로 일괄 전환
 - 🔁 **매끄러운 왕복** — SPA 라우팅 + 스크롤 복원, 외부 이동 후 보던 자리로 복귀
 - 📱 **모바일 우선 + PWA** — 홈 화면 추가, "Cloud Dancer"(PANTONE 2026) 라이트 테마
-- 🛠 **관리자 페이지** — 하이라이트 오매칭 교정(경기별 접이식)·대표 영상 지정·후보 승인·수동 추가
 
 ## 기술 스택
 
@@ -42,7 +41,6 @@ flowchart LR
   YT[YouTube Data API<br/>JTBC · KBS] -->|collect:highlights<br/>자동 매칭| DB
   CHZZK[Chzzk API<br/>LIVE + VOD] -->|sync:matches<br/>collect:highlights| DB
   DB <--> APP[Next.js PWA]
-  ADMIN[관리자 /admin] -->|교정·대표지정·승인| DB
   APP --> U((사용자))
 ```
 
@@ -55,23 +53,12 @@ flowchart LR
 
 ```bash
 pnpm install
-cp .env.local.example .env.local   # 키 입력 (아래 표 참고)
+cp .env.local.example .env.local   # 키 입력
 pnpm dev                            # http://localhost:3000
 ```
 
 Supabase 스키마는 [`supabase/schema.sql`](supabase/schema.sql)을 SQL Editor에 붙여넣어 적용합니다.
 키가 없으면 `lib/mock-data.ts`의 목 데이터로 UI가 동작합니다.
-
-### 환경 변수
-
-| 변수 | 설명 |
-|---|---|
-| `FOOTBALL_DATA_TOKEN` | football-data.org API 토큰(일정/결과) |
-| `YOUTUBE_API_KEY` | YouTube Data API v3 키(하이라이트 수집) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon 키(공개 읽기) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role 키(동기화·관리자 쓰기) |
-| `ADMIN_TOKEN` | `/admin` 보호용 토큰(미설정 시 로컬 무인증 접근) |
 
 ### 스크립트
 
@@ -82,15 +69,6 @@ Supabase 스키마는 [`supabase/schema.sql`](supabase/schema.sql)을 SQL Editor
 | `pnpm verify:sources` | 데이터 소스 점검(WC 일정·임베드 가능 비율) |
 | `pnpm sync:matches` | football-data → Supabase 일정 동기화 |
 | `pnpm collect:highlights` | YouTube 하이라이트 수집·자동 매칭 |
-
-## 관리자 (`/admin`)
-
-- **하이라이트 교정** — 경기별 접이식, 오매칭 의심(⚠️) 경기만 자동 펼침
-- **대표 지정** — 앱 맨 위 임베드 영상을 "맨 위로"로 교체
-- **후보 승인 / 거부** — 자동 매칭 안 된 영상을 경기에 연결
-- **수동 추가** — 치지직/유튜브 URL을 경기에 직접 연결
-
-> `ADMIN_TOKEN`을 설정하면 `/admin/login`에서 토큰 인증을 요구합니다.
 
 ## 문서
 
