@@ -53,22 +53,12 @@ flowchart LR
 
 ```bash
 pnpm install
-cp .env.local.example .env.local   # 키 입력 (아래 표 참고)
+cp .env.local.example .env.local   # 키 입력
 pnpm dev                            # http://localhost:3000
 ```
 
 Supabase 스키마는 [`supabase/schema.sql`](supabase/schema.sql)을 SQL Editor에 붙여넣어 적용합니다.
 키가 없으면 `lib/mock-data.ts`의 목 데이터로 UI가 동작합니다.
-
-### 환경 변수
-
-| 변수 | 설명 |
-|---|---|
-| `FOOTBALL_DATA_TOKEN` | football-data.org API 토큰(일정/결과) |
-| `YOUTUBE_API_KEY` | YouTube Data API v3 키(하이라이트 수집) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon 키(공개 읽기) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role 키(서버 쓰기 권한) |
 
 ### 스크립트
 
