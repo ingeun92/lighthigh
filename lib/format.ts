@@ -35,6 +35,16 @@ export function kstTime(iso: string): string {
   }).format(new Date(iso));
 }
 
+export function kstShortDateTime(iso: string): string {
+  // '6/29 04:00' — compact month/day + time, used for bracket slot labels
+  const md = new Intl.DateTimeFormat("en-US", {
+    timeZone: KST,
+    month: "numeric",
+    day: "numeric",
+  }).format(new Date(iso));
+  return `${md} ${kstTime(iso)}`;
+}
+
 export function kstDay(iso: string): string {
   return new Intl.DateTimeFormat("en-US", { timeZone: KST, day: "numeric" }).format(
     new Date(iso)
