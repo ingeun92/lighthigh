@@ -7,8 +7,18 @@ import { flagSrc } from "@/lib/countries";
 
 // Per-source external link UX — label and brand color (YouTube=red, Chzzk=green) make the destination clear.
 const SOURCE_META: Record<HighlightSource, { label: string; open: string; chip: string; text: string }> = {
-  youtube: { label: "YouTube", open: "YouTube에서 열기", chip: "bg-red-50 text-red-600", text: "text-red-600" },
-  chzzk: { label: "치지직", open: "치지직 앱에서 열기", chip: "bg-emerald-50 text-emerald-600", text: "text-emerald-600" },
+  youtube: {
+    label: "YouTube",
+    open: "YouTube에서 열기",
+    chip: "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-300",
+    text: "text-red-600 dark:text-red-300",
+  },
+  chzzk: {
+    label: "치지직",
+    open: "치지직 앱에서 열기",
+    chip: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
+    text: "text-emerald-600 dark:text-emerald-300",
+  },
 };
 
 function FlagMini({ team }: { team: Team }) {
@@ -70,7 +80,7 @@ export default function HighlightViewer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-ink/55 sm:items-center sm:justify-center sm:p-6"
+      className="fixed inset-0 z-50 flex flex-col bg-ink/55 dark:bg-black/70 sm:items-center sm:justify-center sm:p-6"
       onClick={close}
       role="dialog"
       aria-modal="true"
@@ -91,7 +101,7 @@ export default function HighlightViewer({
             ) : (
               <button
                 onClick={onReveal}
-                className="shrink-0 whitespace-nowrap rounded-full bg-ink/80 px-2.5 py-1 text-[0.65rem] font-bold text-white"
+                className="shrink-0 whitespace-nowrap rounded-full bg-ink/80 dark:bg-black/60 px-2.5 py-1 text-[0.65rem] font-bold text-white"
               >
                 결과 보기
               </button>
@@ -111,7 +121,7 @@ export default function HighlightViewer({
         <div className="flex min-h-0 flex-1 flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-6">
           {embed && embedSrc && embedMeta ? (
             <div className="shrink-0 space-y-2">
-              <div className="aspect-video w-full overflow-hidden rounded-2xl bg-ink">
+              <div className="aspect-video w-full overflow-hidden rounded-2xl bg-ink dark:bg-black">
                 <iframe
                   className="h-full w-full"
                   src={embedSrc}
@@ -131,11 +141,11 @@ export default function HighlightViewer({
               </a>
             </div>
           ) : chzzkOnly ? (
-            <div className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-4 text-center">
-              <p className="text-sm font-bold text-emerald-700">
-                치지직 정책상 여기서 바로 재생할 수 없어요
+            <div className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-4 text-center dark:border-emerald-500/30 dark:bg-emerald-500/10">
+              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                FIFA와 치지직 정책상 여기서 바로 재생할 수 없어요
               </p>
-              <p className="mt-1 text-xs text-emerald-600">
+              <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
                 아래 링크로 치지직 앱·웹에서 시청하세요
               </p>
             </div>

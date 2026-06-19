@@ -40,12 +40,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+// Applies the saved (or system) theme before first paint to prevent a flash of the wrong theme.
+const THEME_INIT = `(function(){try{var t=localStorage.getItem('theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;var r=document.documentElement;r.classList.toggle('dark',d);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d?'#1b1916':'#F0EEE9');}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko" className="h-full antialiased">
       <body className="min-h-full bg-canvas pb-[calc(3rem+env(safe-area-inset-bottom))] text-ink">
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         {children}
         <Footer />
         <Analytics />
