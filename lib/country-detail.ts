@@ -1,14 +1,18 @@
 // Country detail metadata for the country popup, keyed by football-data team.tla (3-letter code).
 //
 // This data is NOT available from the football-data.org API, so it is maintained manually here.
+// Values verified against official sources (FIFA Men's World Ranking 2026-06-11 edition;
+// Wikipedia "[Country] at the FIFA World Cup" records; UN/World Bank population estimates).
+//
 // FIFA ranking and World Cup appearance counts change over time — they are a labeled SNAPSHOT
 // (see FIFA_RANK_SNAPSHOT / WC_APPEARANCE_SNAPSHOT). Update the values here when refreshing.
+// wcAppearances is the all-time finals count and INCLUDES 2026 for teams that qualified.
 
 export interface CountryDetail {
   // World Cup
   confederation: string; // football confederation, e.g. "AFC", "UEFA"
   fifaRank: number; // FIFA ranking snapshot
-  wcAppearances: number; // World Cup finals appearances (see WC_APPEARANCE_SNAPSHOT)
+  wcAppearances: number; // World Cup finals appearances, all-time (see WC_APPEARANCE_SNAPSHOT)
   bestResult: string; // best World Cup result (Korean display string)
   // Country basics
   continent: string; // geographic continent (Korean)
@@ -18,13 +22,13 @@ export interface CountryDetail {
 }
 
 // Labels shown in the popup so the time-sensitive figures are clearly dated.
-export const FIFA_RANK_SNAPSHOT = "2025년 7월 기준";
-export const WC_APPEARANCE_SNAPSHOT = "2026년 대회 포함";
+export const FIFA_RANK_SNAPSHOT = "2026년 6월 기준";
+export const WC_APPEARANCE_SNAPSHOT = "역대 통산";
 
 // Uruguay appears under two codes (URU / URY) in the source data — share one record.
 const URUGUAY: CountryDetail = {
   confederation: "CONMEBOL",
-  fifaRank: 15,
+  fifaRank: 16,
   wcAppearances: 15,
   bestResult: "우승 (2회 · 1930, 1950)",
   continent: "남아메리카",
@@ -37,7 +41,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   // ── AFC (아시아) ─────────────────────────────────────────────
   KOR: {
     confederation: "AFC",
-    fifaRank: 23,
+    fifaRank: 25,
     wcAppearances: 12,
     bestResult: "4강 (2002)",
     continent: "아시아",
@@ -47,7 +51,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   JPN: {
     confederation: "AFC",
-    fifaRank: 17,
+    fifaRank: 18,
     wcAppearances: 8,
     bestResult: "16강 (2002, 2010, 2018, 2022)",
     continent: "아시아",
@@ -57,12 +61,12 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   AUS: {
     confederation: "AFC",
-    fifaRank: 24,
+    fifaRank: 27,
     wcAppearances: 7,
     bestResult: "16강 (2006, 2022)",
     continent: "오세아니아",
     capital: "캔버라",
-    population: "약 2,600만",
+    population: "약 2,700만",
     languages: "영어",
   },
   IRN: {
@@ -72,12 +76,12 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
     bestResult: "조별리그",
     continent: "아시아",
     capital: "테헤란",
-    population: "약 8,900만",
+    population: "약 9,100만",
     languages: "페르시아어",
   },
   KSA: {
     confederation: "AFC",
-    fifaRank: 58,
+    fifaRank: 42,
     wcAppearances: 7,
     bestResult: "16강 (1994)",
     continent: "아시아",
@@ -87,17 +91,17 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   QAT: {
     confederation: "AFC",
-    fifaRank: 52,
+    fifaRank: 56,
     wcAppearances: 2,
     bestResult: "조별리그",
     continent: "아시아",
     capital: "도하",
-    population: "약 270만",
+    population: "약 300만",
     languages: "아랍어",
   },
   UZB: {
     confederation: "AFC",
-    fifaRank: 57,
+    fifaRank: 50,
     wcAppearances: 1,
     bestResult: "첫 본선 진출",
     continent: "아시아",
@@ -107,7 +111,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   JOR: {
     confederation: "AFC",
-    fifaRank: 62,
+    fifaRank: 63,
     wcAppearances: 1,
     bestResult: "첫 본선 진출",
     continent: "아시아",
@@ -117,19 +121,19 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   IRQ: {
     confederation: "AFC",
-    fifaRank: 58,
-    wcAppearances: 1,
+    fifaRank: 57,
+    wcAppearances: 2,
     bestResult: "조별리그 (1986)",
     continent: "아시아",
     capital: "바그다드",
-    population: "약 4,500만",
+    population: "약 4,800만",
     languages: "아랍어",
   },
 
   // ── CONCACAF (북중미) ────────────────────────────────────────
   USA: {
     confederation: "CONCACAF",
-    fifaRank: 16,
+    fifaRank: 17,
     wcAppearances: 12,
     bestResult: "3위 (1930)",
     continent: "북아메리카",
@@ -139,7 +143,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   CAN: {
     confederation: "CONCACAF",
-    fifaRank: 31,
+    fifaRank: 30,
     wcAppearances: 3,
     bestResult: "조별리그",
     continent: "북아메리카",
@@ -149,7 +153,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   MEX: {
     confederation: "CONCACAF",
-    fifaRank: 15,
+    fifaRank: 14,
     wcAppearances: 18,
     bestResult: "8강 (1970, 1986)",
     continent: "북아메리카",
@@ -159,7 +163,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   CRC: {
     confederation: "CONCACAF",
-    fifaRank: 54,
+    fifaRank: 53,
     wcAppearances: 6,
     bestResult: "8강 (2014)",
     continent: "북아메리카",
@@ -169,7 +173,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   PAN: {
     confederation: "CONCACAF",
-    fifaRank: 40,
+    fifaRank: 34,
     wcAppearances: 2,
     bestResult: "조별리그 (2018)",
     continent: "북아메리카",
@@ -179,7 +183,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   HON: {
     confederation: "CONCACAF",
-    fifaRank: 80,
+    fifaRank: 65,
     wcAppearances: 3,
     bestResult: "조별리그",
     continent: "북아메리카",
@@ -189,8 +193,8 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   HAI: {
     confederation: "CONCACAF",
-    fifaRank: 85,
-    wcAppearances: 1,
+    fifaRank: 83,
+    wcAppearances: 2,
     bestResult: "조별리그 (1974)",
     continent: "북아메리카",
     capital: "포르토프랭스",
@@ -199,7 +203,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   CUW: {
     confederation: "CONCACAF",
-    fifaRank: 90,
+    fifaRank: 82,
     wcAppearances: 1,
     bestResult: "첫 본선 진출",
     continent: "북아메리카",
@@ -211,7 +215,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   // ── CONMEBOL (남미) ─────────────────────────────────────────
   BRA: {
     confederation: "CONMEBOL",
-    fifaRank: 5,
+    fifaRank: 6,
     wcAppearances: 23,
     bestResult: "우승 (5회)",
     continent: "남아메리카",
@@ -233,7 +237,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   URY: URUGUAY,
   COL: {
     confederation: "CONMEBOL",
-    fifaRank: 12,
+    fifaRank: 13,
     wcAppearances: 7,
     bestResult: "8강 (2014)",
     continent: "남아메리카",
@@ -253,7 +257,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   PAR: {
     confederation: "CONMEBOL",
-    fifaRank: 55,
+    fifaRank: 41,
     wcAppearances: 9,
     bestResult: "8강 (2010)",
     continent: "남아메리카",
@@ -263,7 +267,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   CHI: {
     confederation: "CONMEBOL",
-    fifaRank: 55,
+    fifaRank: 51,
     wcAppearances: 9,
     bestResult: "3위 (1962)",
     continent: "남아메리카",
@@ -273,7 +277,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   PER: {
     confederation: "CONMEBOL",
-    fifaRank: 45,
+    fifaRank: 52,
     wcAppearances: 5,
     bestResult: "8강 (1970)",
     continent: "남아메리카",
@@ -315,7 +319,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   GER: {
     confederation: "UEFA",
-    fifaRank: 9,
+    fifaRank: 10,
     wcAppearances: 21,
     bestResult: "우승 (4회)",
     continent: "유럽",
@@ -325,7 +329,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   POR: {
     confederation: "UEFA",
-    fifaRank: 6,
+    fifaRank: 5,
     wcAppearances: 9,
     bestResult: "3위 (1966)",
     continent: "유럽",
@@ -335,7 +339,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   NED: {
     confederation: "UEFA",
-    fifaRank: 7,
+    fifaRank: 8,
     wcAppearances: 12,
     bestResult: "준우승 (3회)",
     continent: "유럽",
@@ -345,7 +349,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   ITA: {
     confederation: "UEFA",
-    fifaRank: 10,
+    fifaRank: 12,
     wcAppearances: 18,
     bestResult: "우승 (4회)",
     continent: "유럽",
@@ -355,7 +359,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   BEL: {
     confederation: "UEFA",
-    fifaRank: 8,
+    fifaRank: 9,
     wcAppearances: 15,
     bestResult: "3위 (2018)",
     continent: "유럽",
@@ -365,7 +369,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   CRO: {
     confederation: "UEFA",
-    fifaRank: 10,
+    fifaRank: 11,
     wcAppearances: 7,
     bestResult: "준우승 (2018)",
     continent: "유럽",
@@ -386,7 +390,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   DEN: {
     confederation: "UEFA",
     fifaRank: 21,
-    wcAppearances: 7,
+    wcAppearances: 6,
     bestResult: "8강 (1998)",
     continent: "유럽",
     capital: "코펜하겐",
@@ -395,7 +399,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   POL: {
     confederation: "UEFA",
-    fifaRank: 34,
+    fifaRank: 36,
     wcAppearances: 9,
     bestResult: "3위 (1974, 1982)",
     continent: "유럽",
@@ -405,7 +409,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   SRB: {
     confederation: "UEFA",
-    fifaRank: 33,
+    fifaRank: 43,
     wcAppearances: 13,
     bestResult: "4강 (1930, 1962 · 유고슬라비아)",
     continent: "유럽",
@@ -415,7 +419,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   AUT: {
     confederation: "UEFA",
-    fifaRank: 25,
+    fifaRank: 24,
     wcAppearances: 8,
     bestResult: "3위 (1954)",
     continent: "유럽",
@@ -425,8 +429,8 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   SCO: {
     confederation: "UEFA",
-    fifaRank: 40,
-    wcAppearances: 8,
+    fifaRank: 42,
+    wcAppearances: 9,
     bestResult: "조별리그",
     continent: "유럽",
     capital: "에든버러",
@@ -435,7 +439,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   WAL: {
     confederation: "UEFA",
-    fifaRank: 30,
+    fifaRank: 37,
     wcAppearances: 2,
     bestResult: "8강 (1958)",
     continent: "유럽",
@@ -445,7 +449,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   TUR: {
     confederation: "UEFA",
-    fifaRank: 26,
+    fifaRank: 22,
     wcAppearances: 3,
     bestResult: "3위 (2002)",
     continent: "유럽 · 아시아",
@@ -455,7 +459,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   UKR: {
     confederation: "UEFA",
-    fifaRank: 25,
+    fifaRank: 32,
     wcAppearances: 1,
     bestResult: "8강 (2006)",
     continent: "유럽",
@@ -465,8 +469,8 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   NOR: {
     confederation: "UEFA",
-    fifaRank: 38,
-    wcAppearances: 3,
+    fifaRank: 31,
+    wcAppearances: 4,
     bestResult: "16강 (1998)",
     continent: "유럽",
     capital: "오슬로",
@@ -475,8 +479,8 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   SWE: {
     confederation: "UEFA",
-    fifaRank: 28,
-    wcAppearances: 12,
+    fifaRank: 38,
+    wcAppearances: 13,
     bestResult: "준우승 (1958)",
     continent: "유럽",
     capital: "스톡홀름",
@@ -497,7 +501,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
     confederation: "UEFA",
     fifaRank: 48,
     wcAppearances: 3,
-    bestResult: "조별리그",
+    bestResult: "16강 (2014)",
     continent: "유럽",
     capital: "아테네",
     population: "약 1,030만",
@@ -505,8 +509,8 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   BIH: {
     confederation: "UEFA",
-    fifaRank: 74,
-    wcAppearances: 1,
+    fifaRank: 64,
+    wcAppearances: 2,
     bestResult: "조별리그 (2014)",
     continent: "유럽",
     capital: "사라예보",
@@ -517,7 +521,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   // ── CAF (아프리카) ──────────────────────────────────────────
   MAR: {
     confederation: "CAF",
-    fifaRank: 12,
+    fifaRank: 7,
     wcAppearances: 7,
     bestResult: "4강 (2022)",
     continent: "아프리카",
@@ -527,7 +531,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   SEN: {
     confederation: "CAF",
-    fifaRank: 18,
+    fifaRank: 15,
     wcAppearances: 4,
     bestResult: "8강 (2002)",
     continent: "아프리카",
@@ -537,7 +541,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   TUN: {
     confederation: "CAF",
-    fifaRank: 41,
+    fifaRank: 45,
     wcAppearances: 7,
     bestResult: "조별리그",
     continent: "아프리카",
@@ -547,8 +551,8 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   ALG: {
     confederation: "CAF",
-    fifaRank: 43,
-    wcAppearances: 4,
+    fifaRank: 28,
+    wcAppearances: 5,
     bestResult: "16강 (2014)",
     continent: "아프리카",
     capital: "알제",
@@ -557,8 +561,8 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   EGY: {
     confederation: "CAF",
-    fifaRank: 33,
-    wcAppearances: 3,
+    fifaRank: 29,
+    wcAppearances: 4,
     bestResult: "조별리그",
     continent: "아프리카",
     capital: "카이로",
@@ -567,7 +571,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   NGA: {
     confederation: "CAF",
-    fifaRank: 40,
+    fifaRank: 26,
     wcAppearances: 6,
     bestResult: "16강 (1994, 1998, 2014)",
     continent: "아프리카",
@@ -577,8 +581,8 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   GHA: {
     confederation: "CAF",
-    fifaRank: 68,
-    wcAppearances: 4,
+    fifaRank: 73,
+    wcAppearances: 5,
     bestResult: "8강 (2010)",
     continent: "아프리카",
     capital: "아크라",
@@ -587,7 +591,7 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   CMR: {
     confederation: "CAF",
-    fifaRank: 53,
+    fifaRank: 44,
     wcAppearances: 8,
     bestResult: "8강 (1990)",
     continent: "아프리카",
@@ -597,12 +601,12 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
   },
   CIV: {
     confederation: "CAF",
-    fifaRank: 40,
-    wcAppearances: 3,
+    fifaRank: 33,
+    wcAppearances: 4,
     bestResult: "조별리그",
     continent: "아프리카",
     capital: "야무수크로",
-    population: "약 2,900만",
+    population: "약 3,100만",
     languages: "프랑스어",
   },
   RSA: {
@@ -612,37 +616,37 @@ export const COUNTRY_DETAIL_BY_TLA: Record<string, CountryDetail> = {
     bestResult: "조별리그",
     continent: "아프리카",
     capital: "프리토리아",
-    population: "약 6,000만",
+    population: "약 6,300만",
     languages: "영어 외 11개 공용어",
   },
   MLI: {
     confederation: "CAF",
-    fifaRank: 50,
-    wcAppearances: 1,
-    bestResult: "첫 본선 진출",
+    fifaRank: 55,
+    wcAppearances: 0,
+    bestResult: "본선 진출 경험 없음",
     continent: "아프리카",
     capital: "바마코",
-    population: "약 2,300만",
+    population: "약 2,400만",
     languages: "프랑스어",
   },
   CPV: {
     confederation: "CAF",
-    fifaRank: 70,
+    fifaRank: 67,
     wcAppearances: 1,
     bestResult: "첫 본선 진출",
     continent: "아프리카",
     capital: "프라이아",
-    population: "약 60만",
+    population: "약 52만",
     languages: "포르투갈어",
   },
   COD: {
     confederation: "CAF",
-    fifaRank: 60,
-    wcAppearances: 1,
+    fifaRank: 46,
+    wcAppearances: 2,
     bestResult: "조별리그 (1974 · 자이르)",
     continent: "아프리카",
     capital: "킨샤사",
-    population: "약 1억 200만",
+    population: "약 1억 600만",
     languages: "프랑스어",
   },
 
