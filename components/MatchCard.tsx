@@ -5,6 +5,7 @@ import type { Match, Team } from "@/lib/types";
 import { STAGE_LABEL } from "@/lib/types";
 import { kstTime } from "@/lib/format";
 import { flagSrc } from "@/lib/countries";
+import { venueFromName } from "@/lib/venues";
 
 function FlagImg({ team }: { team: Team }) {
   const [err, setErr] = useState(false);
@@ -25,6 +26,31 @@ function FlagImg({ team }: { team: Team }) {
         className="h-full w-full object-cover"
       />
     </span>
+  );
+}
+
+// Venue caption shown under the score row: small host-country flag + "국가 · 경기장".
+// Falls back to the raw venue string with a pin when the stadium isn't in our 2026 catalogue.
+function VenueLine({ venue }: { venue: string }) {
+  const info = venueFromName(venue);
+  if (!info) {
+    return (
+      <div className="mt-2.5 text-center text-[0.7rem] font-medium text-muted">📍 {venue}</div>
+    );
+  }
+  const src = flagSrc(info.countryCode);
+  return (
+    <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[0.7rem] font-medium text-muted">
+      {src && (
+        <span className="grid h-3 w-4 shrink-0 place-items-center overflow-hidden rounded-[2px] ring-1 ring-line">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
+        </span>
+      )}
+      <span className="truncate">
+        {info.countryKo} · {info.stadiumKo}
+      </span>
+    </div>
   );
 }
 
@@ -147,6 +173,8 @@ export default function MatchCard({
           {match.away.nameKo}
         </button>
       </div>
+
+      {match.venue && <VenueLine venue={match.venue} />}
 
       {isLive && match.liveUrl && (
         <a
