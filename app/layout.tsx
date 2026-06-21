@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Footer from "@/components/Footer";
+import VersionWatcher from "@/components/VersionWatcher";
 
 const TITLE = "lighthigh — 월드컵 하이라이트 한 곳에";
 const DESCRIPTION =
@@ -52,6 +53,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         {children}
         <Footer />
+        <VersionWatcher />
         <Analytics />
       </body>
     </html>
