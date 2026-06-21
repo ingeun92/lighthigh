@@ -79,26 +79,22 @@ export async function getAdminData(): Promise<AdminData> {
   const sb = getAdminClient();
 
   const HL_SELECT =
-    "id, title, channel, source, embeddable, sort_order, match_id, match:match_id(home:home_team_id(name_ko), away:away_team_id(name_ko))";
+    "reviewed, id, title, channel, source, embeddable, sort_order, match_id, match:match_id(home:home_team_id(name_ko), away:away_team_id(name_ko))";
 
-  // reviewed column may not exist yet — fall back gracefully
-  const fetchHighlights = async (): Promise<HighlightRow[]> => {
-    const q = (sel: string) =>
-      sb.from("highlights").select(sel).order("match_id").order("sort_order").order("id");
-    const withRev = await q("reviewed, " + HL_SELECT);
-    if (!withRev.error) return (withRev.data ?? []) as unknown as HighlightRow[];
-    const base = await q(HL_SELECT);
-    return ((base.data ?? []) as unknown as HighlightRow[]).map((h) => ({ ...h, reviewed: false }));
-  };
-
-  const [{ data: matchRows }, hlRows, { data: candRows }] = await Promise.all([
+  const [{ data: matchRows }, { data: hlData }, { data: candRows }] = await Promise.all([
     sb
       .from("matches")
       .select("id, kickoff_utc, group_label, home:home_team_id(name_ko), away:away_team_id(name_ko)")
       .in("status", ["finished", "live"]) // only matches that have been played
       .order("kickoff_utc", { ascending: false }) // most recent match at top of dropdown (easier candidate assignment)
       .returns<MatchRow[]>(),
-    fetchHighlights(),
+    sb
+      .from("highlights")
+      .select(HL_SELECT)
+      .order("match_id")
+      .order("sort_order")
+      .order("id")
+      .returns<HighlightRow[]>(),
     sb
       .from("highlight_candidates")
       .select("id, title, channel, video_id, embeddable, thumbnail_url")
@@ -119,7 +115,7 @@ export async function getAdminData(): Promise<AdminData> {
   });
 
   // Compute the featured video id per match (first embeddable YouTube by sort_order)
-  const rows = hlRows;
+  const rows = hlData ?? [];
   const primaryIds = new Set<number>();
   const seen = new Set<number>();
   for (const h of rows) {

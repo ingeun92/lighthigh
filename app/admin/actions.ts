@@ -22,7 +22,8 @@ export async function login(formData: FormData) {
   if (token && token === process.env.ADMIN_TOKEN) {
     (await cookies()).set("lh_admin", token, {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "strict", // admin is never reached via cross-site navigation
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
@@ -61,11 +62,15 @@ export async function featureHighlight(formData: FormData) {
   const sb = getAdminClient();
   const { data: hl } = await sb.from("highlights").select("match_id").eq("id", id).single();
   if (!hl) return;
+  // Fetch only the current minimum sort_order (ordered + limit 1) instead of
+  // pulling every highlight row for the match just to Math.min in JS.
   const { data: rows } = await sb
     .from("highlights")
     .select("sort_order")
-    .eq("match_id", hl.match_id);
-  const min = Math.min(0, ...(rows ?? []).map((r) => r.sort_order ?? 0));
+    .eq("match_id", hl.match_id)
+    .order("sort_order", { ascending: true })
+    .limit(1);
+  const min = Math.min(0, rows?.[0]?.sort_order ?? 0);
   await sb.from("highlights").update({ sort_order: min - 1 }).eq("id", id);
   refresh();
 }
@@ -139,7 +144,10 @@ export async function addManualHighlight(formData: FormData) {
     {
       match_id: matchId,
       source: parsed!.source,
-      url: rawUrl.trim(),
+      // Store a reconstructed canonical URL from the validated source+id rather
+      // than the raw input — prevents a non-https (e.g. javascript:) URI that
+      // merely contains a valid host substring from being stored and rendered into an href.
+      url: urlFor(parsed!.source, parsed!.videoId),
       video_id: parsed!.videoId,
       title: String(formData.get("title") ?? "") || null,
       channel: parsed!.source === "chzzk" ? "치지직" : null,

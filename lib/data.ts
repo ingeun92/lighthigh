@@ -114,7 +114,10 @@ export async function getMatches(): Promise<Match[]> {
     console.error("[data] Supabase 조회 실패, 목 데이터로 폴백:", error.message);
     return MOCK_MATCHES;
   }
-  if (!data || data.length === 0) return MOCK_MATCHES;
+  // A genuinely empty result is a real "no matches" state — return it as-is.
+  // (Substituting mock fixtures here would mask an empty/unseeded DB with fake data.)
+  if (!data) return MOCK_MATCHES;
+  if (data.length === 0) return [];
   // Map external_id → kickoff so Round of 16+ slots can render the feeding
   // match's date/time (e.g. "6/29 04:00 승자").
   const kickoffByExternalId = new Map<string, string>();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { Match, Team } from "@/lib/types";
 import { STAGE_LABEL } from "@/lib/types";
 import { kstTime } from "@/lib/format";
@@ -55,7 +55,7 @@ function VenueLine({ venue }: { venue: string }) {
   );
 }
 
-export default function MatchCard({
+function MatchCard({
   match,
   hideSpoilers,
   revealed,
@@ -66,7 +66,7 @@ export default function MatchCard({
   match: Match;
   hideSpoilers: boolean;
   revealed: boolean;
-  onReveal: () => void;
+  onReveal: (id: string) => void;
   onOpenHighlights: (m: Match) => void;
   onOpenCountry: (team: Team) => void;
 }) {
@@ -131,7 +131,7 @@ export default function MatchCard({
               </div>
               {!showScore && (
                 <button
-                  onClick={onReveal}
+                  onClick={() => onReveal(match.id)}
                   aria-label="결과 보기"
                   className="absolute inset-0 grid place-items-center"
                 >
@@ -209,3 +209,7 @@ export default function MatchCard({
     </div>
   );
 }
+
+// Memoized so a parent re-render (spoiler toggle, scroll-driven active date)
+// only re-renders cards whose own props actually changed, not all ~104 cards.
+export default memo(MatchCard);

@@ -49,6 +49,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko" className="h-full antialiased">
+      <head>
+        {/* Flags (flag-icons SVGs) and the NanumSquare font both load from jsDelivr —
+            open the TLS connection early so the first flags/font paint sooner. */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+      </head>
       <body className="min-h-full bg-canvas pb-[calc(3rem+env(safe-area-inset-bottom))] text-ink">
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         {children}
