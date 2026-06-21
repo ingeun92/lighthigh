@@ -11,7 +11,8 @@ function FlagImg({ team }: { team: Team }) {
   const [err, setErr] = useState(false);
   const src = flagSrc(team.countryCode);
   // flag-icons 4x3 normalizes every flag to exactly 4:3 → 4:3 box + object-cover for uniform display.
-  const box = "grid h-12 w-16 place-items-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-line";
+  const box =
+    "grid h-12 w-16 place-items-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-line transition duration-200 group-hover:ring-2 group-hover:ring-accent group-hover:shadow-md";
   if (!src || err) {
     return <span className={`${box} text-[2rem]`}>{team.flag}</span>;
   }
@@ -110,7 +111,7 @@ export default function MatchCard({
             type="button"
             onClick={() => onOpenCountry(match.home)}
             aria-label={`${match.home.nameKo} 정보 보기`}
-            className="rounded-lg transition-transform active:scale-95"
+            className="group rounded-lg transition-transform duration-200 ease-out hover:-translate-y-1 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <FlagImg team={match.home} />
           </button>
@@ -149,7 +150,7 @@ export default function MatchCard({
             type="button"
             onClick={() => onOpenCountry(match.away)}
             aria-label={`${match.away.nameKo} 정보 보기`}
-            className="rounded-lg transition-transform active:scale-95"
+            className="group rounded-lg transition-transform duration-200 ease-out hover:-translate-y-1 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <FlagImg team={match.away} />
           </button>
@@ -158,7 +159,7 @@ export default function MatchCard({
         <button
           type="button"
           onClick={() => onOpenCountry(match.home)}
-          className={`${nameCls} underline-offset-2 active:underline`}
+          className={`${nameCls} underline decoration-dotted decoration-muted/30 underline-offset-[3px] transition-colors duration-150 hover:text-accent hover:decoration-accent focus-visible:text-accent focus-visible:outline-none active:text-accent`}
         >
           {match.home.nameKo}
         </button>
@@ -168,7 +169,7 @@ export default function MatchCard({
         <button
           type="button"
           onClick={() => onOpenCountry(match.away)}
-          className={`${nameCls} underline-offset-2 active:underline`}
+          className={`${nameCls} underline decoration-dotted decoration-muted/30 underline-offset-[3px] transition-colors duration-150 hover:text-accent hover:decoration-accent focus-visible:text-accent focus-visible:outline-none active:text-accent`}
         >
           {match.away.nameKo}
         </button>
