@@ -4,75 +4,76 @@ import type { Match } from "./types";
 
 const KST = "Asia/Seoul";
 
+// Intl.DateTimeFormat construction is expensive; build each formatter once at
+// module load and reuse it (these are pure, options never change per call).
+const FMT_DATE_KEY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: KST,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const FMT_DATE_LABEL = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: KST,
+  month: "long",
+  day: "numeric",
+  weekday: "short",
+});
+const FMT_TIME = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: KST,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+const FMT_MD_EN = new Intl.DateTimeFormat("en-US", {
+  timeZone: KST,
+  month: "numeric",
+  day: "numeric",
+});
+const FMT_DAY = new Intl.DateTimeFormat("en-US", { timeZone: KST, day: "numeric" });
+const FMT_WEEKDAY = new Intl.DateTimeFormat("ko-KR", { timeZone: KST, weekday: "short" });
+const FMT_MONTH = new Intl.DateTimeFormat("ko-KR", { timeZone: KST, month: "long" });
+const FMT_MD_KO = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: KST,
+  month: "numeric",
+  day: "numeric",
+});
+
 export function kstDateKey(iso: string): string {
   // 'YYYY-MM-DD' (KST)
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: KST,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(iso));
-  return parts; // en-CA → 2026-06-16
+  return FMT_DATE_KEY.format(new Date(iso)); // en-CA → 2026-06-16
 }
 
 export function kstDateLabel(iso: string): string {
   // e.g. 'June 16 (Mon)'
-  return new Intl.DateTimeFormat("ko-KR", {
-    timeZone: KST,
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  }).format(new Date(iso));
+  return FMT_DATE_LABEL.format(new Date(iso));
 }
 
 export function kstTime(iso: string): string {
   // '21:00'
-  return new Intl.DateTimeFormat("ko-KR", {
-    timeZone: KST,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(iso));
+  return FMT_TIME.format(new Date(iso));
 }
 
 export function kstShortDateTime(iso: string): string {
   // '6/29 04:00' — compact month/day + time, used for bracket slot labels
-  const md = new Intl.DateTimeFormat("en-US", {
-    timeZone: KST,
-    month: "numeric",
-    day: "numeric",
-  }).format(new Date(iso));
-  return `${md} ${kstTime(iso)}`;
+  return `${FMT_MD_EN.format(new Date(iso))} ${kstTime(iso)}`;
 }
 
 export function kstDay(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", { timeZone: KST, day: "numeric" }).format(
-    new Date(iso)
-  );
+  return FMT_DAY.format(new Date(iso));
 }
 
 export function kstWeekday(iso: string): string {
-  return new Intl.DateTimeFormat("ko-KR", { timeZone: KST, weekday: "short" }).format(
-    new Date(iso)
-  );
+  return FMT_WEEKDAY.format(new Date(iso));
 }
 
 export function kstMonth(iso: string): string {
-  return new Intl.DateTimeFormat("ko-KR", { timeZone: KST, month: "long" }).format(
-    new Date(iso)
-  );
+  return FMT_MONTH.format(new Date(iso));
 }
 
 export function kstChip(iso: string): string {
   // '6.16 Mon' — short label for date chip
-  const md = new Intl.DateTimeFormat("ko-KR", {
-    timeZone: KST,
-    month: "numeric",
-    day: "numeric",
-  }).format(new Date(iso));
-  const wd = new Intl.DateTimeFormat("ko-KR", { timeZone: KST, weekday: "short" }).format(
-    new Date(iso)
-  );
+  const md = FMT_MD_KO.format(new Date(iso));
+  const wd = FMT_WEEKDAY.format(new Date(iso));
   return `${md.replace(/\.$/, "").replace(/\. /, ".")} ${wd}`;
 }
 

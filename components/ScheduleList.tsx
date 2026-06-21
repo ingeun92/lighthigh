@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Match, Team } from "@/lib/types";
 import {
@@ -35,7 +35,12 @@ export default function ScheduleList({
   const [activeKey, setActiveKey] = useState<string>(() => nearestGroupKey(groups, nowIso) ?? "");
   const [hideSpoilers, setHideSpoilers] = useState(true);
   const [revealedIds, setRevealedIds] = useState<Set<string>>(() => new Set());
-  const reveal = (id: string) => setRevealedIds((prev) => new Set(prev).add(id));
+  // Stable identity so memoized MatchCards don't re-render when an unrelated
+  // card is revealed — only the card whose `revealed` prop flips re-renders.
+  const reveal = useCallback(
+    (id: string) => setRevealedIds((prev) => new Set(prev).add(id)),
+    []
+  );
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const cellRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const stripRef = useRef<HTMLDivElement | null>(null);
@@ -213,7 +218,7 @@ export default function ScheduleList({
                   match={m}
                   hideSpoilers={hideSpoilers}
                   revealed={revealedIds.has(m.id)}
-                  onReveal={() => reveal(m.id)}
+                  onReveal={reveal}
                   onOpenHighlights={setActive}
                   onOpenCountry={setActiveCountry}
                 />
