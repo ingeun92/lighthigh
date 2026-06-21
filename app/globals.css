@@ -50,6 +50,10 @@
 
 html {
   -webkit-tap-highlight-color: transparent;
+  /* Always reserve the scrollbar gutter so that when a modal sets the body
+     overflow to hidden, the viewport width stays constant and the background
+     content doesn't shift sideways. */
+  scrollbar-gutter: stable;
 }
 
 body {
