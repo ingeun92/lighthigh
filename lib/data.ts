@@ -5,6 +5,7 @@ import type { Match, MatchStatus, Highlight } from "./types";
 import { MOCK_MATCHES } from "./mock-data";
 import { getSupabase } from "./supabase";
 import { KNOCKOUT_SLOTS, type Slot } from "./bracket-2026";
+import { VENUE_BY_EXTERNAL_ID } from "./match-venues";
 import { kstShortDateTime } from "./format";
 
 interface TeamRow {
@@ -83,7 +84,9 @@ function mapRow(r: MatchRow, kickoffByExternalId: Map<string, string>): Match {
     awayScore: r.away_score ?? undefined,
     status: r.status,
     kickoffUtc: r.kickoff_utc,
-    venue: r.venue ?? undefined,
+    // football-data provides no venue for the World Cup, so fall back to the
+    // static external_id → stadium map sourced from the official FIFA schedule.
+    venue: r.venue ?? (r.external_id ? VENUE_BY_EXTERNAL_ID[r.external_id] : undefined) ?? undefined,
     liveUrl: r.live_url ?? undefined,
     highlights,
   };
