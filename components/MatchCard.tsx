@@ -5,12 +5,14 @@ import type { Match, Team } from "@/lib/types";
 import { STAGE_LABEL } from "@/lib/types";
 import { kstTime } from "@/lib/format";
 import { flagSrc } from "@/lib/countries";
+import { venueFromName } from "@/lib/venues";
 
 function FlagImg({ team }: { team: Team }) {
   const [err, setErr] = useState(false);
   const src = flagSrc(team.countryCode);
   // flag-icons 4x3 normalizes every flag to exactly 4:3 → 4:3 box + object-cover for uniform display.
-  const box = "grid h-12 w-16 place-items-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-line";
+  const box =
+    "grid h-12 w-16 place-items-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-line transition duration-200 group-hover:ring-2 group-hover:ring-accent";
   if (!src || err) {
     return <span className={`${box} text-[2rem]`}>{team.flag}</span>;
   }
@@ -28,18 +30,45 @@ function FlagImg({ team }: { team: Team }) {
   );
 }
 
+// Venue caption shown under the score row: small host-country flag + "국가 · 경기장".
+// Falls back to the raw venue string with a pin when the stadium isn't in our 2026 catalogue.
+function VenueLine({ venue }: { venue: string }) {
+  const info = venueFromName(venue);
+  if (!info) {
+    return (
+      <div className="mt-2.5 text-center text-[0.7rem] font-medium text-muted">📍 {venue}</div>
+    );
+  }
+  const src = flagSrc(info.countryCode);
+  return (
+    <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[0.7rem] font-medium text-muted">
+      {src && (
+        <span className="grid h-3 w-4 shrink-0 place-items-center overflow-hidden rounded-[2px] ring-1 ring-line">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
+        </span>
+      )}
+      <span className="truncate">
+        {info.countryKo} · {info.stadiumKo}
+      </span>
+    </div>
+  );
+}
+
 export default function MatchCard({
   match,
   hideSpoilers,
   revealed,
   onReveal,
   onOpenHighlights,
+  onOpenCountry,
 }: {
   match: Match;
   hideSpoilers: boolean;
   revealed: boolean;
   onReveal: () => void;
   onOpenHighlights: (m: Match) => void;
+  onOpenCountry: (team: Team) => void;
 }) {
   const round = STAGE_LABEL[match.stage] ?? match.stage;
   const isFinished = match.status === "finished";
@@ -78,7 +107,14 @@ export default function MatchCard({
       {/* Row 1: flags · score / Row 2: country names — vertically aligned */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-2 py-0.5">
         <div className="flex justify-center">
-          <FlagImg team={match.home} />
+          <button
+            type="button"
+            onClick={() => onOpenCountry(match.home)}
+            aria-label={`${match.home.nameKo} 정보 보기`}
+            className="group rounded-lg transition-transform duration-200 ease-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <FlagImg team={match.home} />
+          </button>
         </div>
         <div className="relative px-1 text-center">
           {hasScore ? (
@@ -110,15 +146,36 @@ export default function MatchCard({
           )}
         </div>
         <div className="flex justify-center">
-          <FlagImg team={match.away} />
+          <button
+            type="button"
+            onClick={() => onOpenCountry(match.away)}
+            aria-label={`${match.away.nameKo} 정보 보기`}
+            className="group rounded-lg transition-transform duration-200 ease-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <FlagImg team={match.away} />
+          </button>
         </div>
 
-        <span className={nameCls}>{match.home.nameKo}</span>
+        <button
+          type="button"
+          onClick={() => onOpenCountry(match.home)}
+          className={`${nameCls} underline decoration-dotted decoration-muted/30 underline-offset-[3px] transition-colors duration-150 hover:text-accent hover:decoration-accent focus-visible:text-accent focus-visible:outline-none active:text-accent`}
+        >
+          {match.home.nameKo}
+        </button>
         <span className="text-center text-[0.6rem] font-bold text-muted">
           {hasScore ? "" : "KST"}
         </span>
-        <span className={nameCls}>{match.away.nameKo}</span>
+        <button
+          type="button"
+          onClick={() => onOpenCountry(match.away)}
+          className={`${nameCls} underline decoration-dotted decoration-muted/30 underline-offset-[3px] transition-colors duration-150 hover:text-accent hover:decoration-accent focus-visible:text-accent focus-visible:outline-none active:text-accent`}
+        >
+          {match.away.nameKo}
+        </button>
       </div>
+
+      {match.venue && <VenueLine venue={match.venue} />}
 
       {isLive && match.liveUrl && (
         <a
