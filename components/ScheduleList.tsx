@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Match } from "@/lib/types";
+import type { Match, Team } from "@/lib/types";
 import {
   groupByKstDate,
   nearestGroupKey,
@@ -13,6 +13,7 @@ import {
 } from "@/lib/format";
 import MatchCard from "./MatchCard";
 import HighlightViewer from "./HighlightViewer";
+import CountryDetail from "./CountryDetail";
 import ThemeToggle from "./ThemeToggle";
 
 export default function ScheduleList({
@@ -30,6 +31,7 @@ export default function ScheduleList({
   const todayKey = kstDateKey(nowIso);
 
   const [active, setActive] = useState<Match | null>(null);
+  const [activeCountry, setActiveCountry] = useState<Team | null>(null);
   const [activeKey, setActiveKey] = useState<string>(() => nearestGroupKey(groups, nowIso) ?? "");
   const [hideSpoilers, setHideSpoilers] = useState(true);
   const [revealedIds, setRevealedIds] = useState<Set<string>>(() => new Set());
@@ -213,6 +215,7 @@ export default function ScheduleList({
                   revealed={revealedIds.has(m.id)}
                   onReveal={() => reveal(m.id)}
                   onOpenHighlights={setActive}
+                  onOpenCountry={setActiveCountry}
                 />
               ))}
             </div>
@@ -228,6 +231,10 @@ export default function ScheduleList({
           onReveal={() => reveal(active.id)}
           onClose={() => setActive(null)}
         />
+      )}
+
+      {activeCountry && (
+        <CountryDetail team={activeCountry} onClose={() => setActiveCountry(null)} />
       )}
     </>
   );

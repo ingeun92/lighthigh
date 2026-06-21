@@ -34,12 +34,14 @@ export default function MatchCard({
   revealed,
   onReveal,
   onOpenHighlights,
+  onOpenCountry,
 }: {
   match: Match;
   hideSpoilers: boolean;
   revealed: boolean;
   onReveal: () => void;
   onOpenHighlights: (m: Match) => void;
+  onOpenCountry: (team: Team) => void;
 }) {
   const round = STAGE_LABEL[match.stage] ?? match.stage;
   const isFinished = match.status === "finished";
@@ -78,7 +80,14 @@ export default function MatchCard({
       {/* Row 1: flags · score / Row 2: country names — vertically aligned */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-2 py-0.5">
         <div className="flex justify-center">
-          <FlagImg team={match.home} />
+          <button
+            type="button"
+            onClick={() => onOpenCountry(match.home)}
+            aria-label={`${match.home.nameKo} 정보 보기`}
+            className="rounded-lg transition-transform active:scale-95"
+          >
+            <FlagImg team={match.home} />
+          </button>
         </div>
         <div className="relative px-1 text-center">
           {hasScore ? (
@@ -110,14 +119,33 @@ export default function MatchCard({
           )}
         </div>
         <div className="flex justify-center">
-          <FlagImg team={match.away} />
+          <button
+            type="button"
+            onClick={() => onOpenCountry(match.away)}
+            aria-label={`${match.away.nameKo} 정보 보기`}
+            className="rounded-lg transition-transform active:scale-95"
+          >
+            <FlagImg team={match.away} />
+          </button>
         </div>
 
-        <span className={nameCls}>{match.home.nameKo}</span>
+        <button
+          type="button"
+          onClick={() => onOpenCountry(match.home)}
+          className={`${nameCls} underline-offset-2 active:underline`}
+        >
+          {match.home.nameKo}
+        </button>
         <span className="text-center text-[0.6rem] font-bold text-muted">
           {hasScore ? "" : "KST"}
         </span>
-        <span className={nameCls}>{match.away.nameKo}</span>
+        <button
+          type="button"
+          onClick={() => onOpenCountry(match.away)}
+          className={`${nameCls} underline-offset-2 active:underline`}
+        >
+          {match.away.nameKo}
+        </button>
       </div>
 
       {isLive && match.liveUrl && (
