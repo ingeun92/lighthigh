@@ -43,7 +43,9 @@ export async function reassignHighlight(formData: FormData) {
   const matchId = Number(formData.get("matchId"));
   if (!id || !matchId) return;
   const sb = getAdminClient();
-  await sb.from("highlights").update({ match_id: matchId }).eq("id", id);
+  // Admin manually reassigned this highlight to a match, so treat it as
+  // already reviewed — don't flag it with the title-mismatch warning.
+  await sb.from("highlights").update({ match_id: matchId, reviewed: true }).eq("id", id);
   refresh();
 }
 
@@ -116,6 +118,9 @@ export async function approveCandidate(formData: FormData) {
       thumbnail_url: cand.thumbnail_url,
       published_at: cand.published_at,
       is_approved: true,
+      // Admin explicitly assigned this candidate to a match, so treat it as
+      // already reviewed — don't flag it with the title-mismatch warning.
+      reviewed: true,
     },
     { onConflict: "match_id,source,video_id" }
   );
@@ -154,6 +159,9 @@ export async function addManualHighlight(formData: FormData) {
       // YouTube manual-add is assumed embeddable (viewer has a fallback link); Chzzk is external-link-only (embedding blocked)
       embeddable: parsed!.source === "youtube",
       is_approved: true,
+      // Admin manually added this highlight to a specific match, so treat it as
+      // already reviewed — don't flag it with the title-mismatch warning.
+      reviewed: true,
     },
     { onConflict: "match_id,source,video_id" }
   );
