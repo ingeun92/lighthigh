@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Match, Team } from "@/lib/types";
 import {
   groupByKstDate,
@@ -23,9 +22,14 @@ export default function ScheduleList({
   matches: Match[];
   nowIso: string;
 }) {
-  const router = useRouter();
-  const [isRefreshing, startRefresh] = useTransition();
-  const refresh = () => startRefresh(() => router.refresh());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  // Full document reload (not a soft router.refresh) so the server re-renders
+  // with a fresh `nowIso` and all client state resets to today — matches what
+  // users expect from a refresh and avoids stale dates lingering on mobile.
+  const refresh = () => {
+    setIsRefreshing(true);
+    window.location.reload();
+  };
 
   const groups = useMemo(() => groupByKstDate(matches), [matches]);
   const todayKey = kstDateKey(nowIso);
