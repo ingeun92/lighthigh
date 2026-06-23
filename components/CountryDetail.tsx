@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Team } from "@/lib/types";
 import { flagSrc } from "@/lib/countries";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 import {
   countryDetailFromTla,
   FIFA_RANK_SNAPSHOT,
@@ -58,15 +59,16 @@ export default function CountryDetail({
 }) {
   const detail = countryDetailFromTla(team.countryCode);
 
+  // Lock background scroll (mobile-safe) while the popup is open
+  useBodyScrollLock();
+
   // Push a history state so the Android back button closes the popup (mirrors HighlightViewer)
   useEffect(() => {
     window.history.pushState({ cd: true }, "");
     const onPop = () => onClose();
     window.addEventListener("popstate", onPop);
-    document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("popstate", onPop);
-      document.body.style.overflow = "";
     };
   }, [onClose]);
 
@@ -77,7 +79,7 @@ export default function CountryDetail({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-ink/55 dark:bg-black/70 sm:items-center sm:justify-center sm:p-6"
+      className="fixed inset-0 z-50 flex flex-col overscroll-contain bg-ink/55 dark:bg-black/70 sm:items-center sm:justify-center sm:p-6"
       onClick={close}
       role="dialog"
       aria-modal="true"
@@ -109,7 +111,7 @@ export default function CountryDetail({
         </div>
 
         {/* Content (scrollable) */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-6">
           {detail ? (
             <div className="space-y-5">
               {/* World Cup */}

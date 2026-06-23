@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { Match, HighlightSource, Team } from "@/lib/types";
 import { sortHighlights, primaryEmbeddable, embedUrlFor, isChzzkOnly } from "@/lib/highlights";
 import { flagSrc } from "@/lib/countries";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 // Per-source external link UX — label and brand color (YouTube=red, Chzzk=green) make the destination clear.
 const SOURCE_META: Record<HighlightSource, { label: string; open: string; chip: string; text: string }> = {
@@ -54,15 +55,16 @@ export default function HighlightViewer({
 }) {
   const showScore = !hideScore || revealed;
 
+  // Lock background scroll (mobile-safe) while the viewer is open
+  useBodyScrollLock();
+
   // Push a history state so the Android back button closes the viewer
   useEffect(() => {
     window.history.pushState({ hv: true }, "");
     const onPop = () => onClose();
     window.addEventListener("popstate", onPop);
-    document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("popstate", onPop);
-      document.body.style.overflow = "";
     };
   }, [onClose]);
 
@@ -80,7 +82,7 @@ export default function HighlightViewer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-ink/55 dark:bg-black/70 sm:items-center sm:justify-center sm:p-6"
+      className="fixed inset-0 z-50 flex flex-col overscroll-contain bg-ink/55 dark:bg-black/70 sm:items-center sm:justify-center sm:p-6"
       onClick={close}
       role="dialog"
       aria-modal="true"
@@ -160,7 +162,7 @@ export default function HighlightViewer({
               {embed && (
                 <p className="eyebrow shrink-0 pb-2 text-muted">다른 하이라이트 {others.length}</p>
               )}
-              <div className="-mr-1 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+              <div className="-mr-1 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">
                 {others.map((h) => {
                   const meta = SOURCE_META[h.source];
                   return (
