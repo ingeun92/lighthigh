@@ -30,7 +30,7 @@ function FlagImg({ team }: { team: Team }) {
   );
 }
 
-// Venue caption shown under the score row: small host-country flag + "국가 · 경기장".
+// Venue caption shown under the score row: small host-country flag + "도시 · 경기장".
 // Falls back to the raw venue string with a pin when the stadium isn't in our 2026 catalogue.
 function VenueLine({ venue }: { venue: string }) {
   const info = venueFromName(venue);
@@ -49,7 +49,7 @@ function VenueLine({ venue }: { venue: string }) {
         </span>
       )}
       <span className="truncate">
-        {info.countryKo} · {info.stadiumKo}
+        {info.cityKo} · {info.stadiumKo}
       </span>
     </div>
   );

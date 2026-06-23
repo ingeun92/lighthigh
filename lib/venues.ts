@@ -7,8 +7,8 @@
 // (case/punctuation-insensitive) to match whatever string the API provides.
 
 export interface VenueInfo {
-  cityKo: string; // host city (Korean) — not shown currently, kept for future use
-  countryKo: string; // host country (Korean)
+  cityKo: string; // host city (Korean) — shown in the venue caption
+  countryKo: string; // host country (Korean) — kept for reference/fallback
   countryCode: string; // ISO alpha-2, for flagSrc()
   stadiumKo: string; // stadium name, Korean transliteration
 }
