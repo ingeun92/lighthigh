@@ -75,6 +75,15 @@ async function syncChzzkLive() {
     )
   ).filter(Boolean);
 
+  // Diagnostic: log every OPEN official channel's live title so unmatched/late-linked cases
+  // (esp. the secondary match of two simultaneous games carried on a sub-channel) are debuggable.
+  if (officialLives.length) {
+    console.log(`· 치지직 OPEN 공식 채널 ${officialLives.length}곳:`);
+    for (const ol of officialLives) console.log(`    - ${ol.name}: "${ol.liveTitle}"`);
+  } else {
+    console.log("· 치지직 OPEN 공식 채널 없음");
+  }
+
   // 2) Match live title team names to matches → { matchId: Chzzk live URL }
   const liveUrlByMatch = new Map();
   if (officialLives.length) {
@@ -96,17 +105,29 @@ async function syncChzzkLive() {
   // 3) Fill link for matched matches, clear only for finished matches (minimize writes)
   const { data: current, error: curErr } = await supabase
     .from("matches")
-    .select("id, status, live_url")
+    .select("id, status, live_url, kickoff_utc")
     .not("live_url", "is", null);
   if (curErr) {
     // live_url column may not exist yet — surface the error explicitly rather than failing silently.
     console.error(`! 치지직 LIVE 연결 건너뜀 — matches.live_url 확인 필요: ${curErr.message}`);
     return;
   }
-  // Only clear when match is no longer LIVE. While LIVE, keep the existing link even if the Chzzk title
-  // changes (half-time/ad break) or the stream drops — prevents the live button from flickering.
+  // Keep a set link alive throughout the match's plausible live window, even if the Chzzk title
+  // momentarily stops matching (pre-show/half-time/ad break, or sub-channel generic title) or the
+  // stream drops — prevents the live button from flickering.
+  //   ⚠ Do NOT gate persistence on matches.status: that field is filled by the separate, lagging
+  //   football-data sync, so between kickoff and the first IN_PLAY report the link would otherwise be
+  //   unprotected and get cleared on any transient title miss (the bug that delayed/dropped links for
+  //   two simultaneous matches). Fall back to kickoff age so the link survives that pre-IN_PLAY window.
+  const LIVE_LINK_TTL_H = 4; // covers 90' + stoppage + ET/penalties + broadcast lead-out
+  const now = Date.now();
   const toClear = (current ?? [])
-    .filter((m) => m.status !== "live" && !liveUrlByMatch.has(m.id))
+    .filter((m) => {
+      if (liveUrlByMatch.has(m.id)) return false; // re-matched this run → keep
+      if (m.status === "finished" || m.status === "postponed") return true; // match over → clear
+      // status may still be 'scheduled'/'live' (or lagging) — keep until the live window elapses.
+      return now - new Date(m.kickoff_utc).getTime() > LIVE_LINK_TTL_H * 3600_000;
+    })
     .map((m) => m.id);
   for (const [matchId, url] of liveUrlByMatch) {
     const existing = (current ?? []).find((m) => m.id === matchId);
