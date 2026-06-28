@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 import { countryFromTla } from "../lib/countries.ts";
 import { buildMatchIndex, findMatchByTitle } from "../lib/match-teams.ts";
 import { CHZZK_OFFICIAL_CHANNELS } from "../lib/chzzk-channels.ts";
+import { KNOCKOUT_SLOTS } from "../lib/bracket-2026.ts";
 
 const FD_TOKEN = process.env.FOOTBALL_DATA_TOKEN?.trim();
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -33,6 +34,117 @@ const STATUS_MAP = {
 };
 
 const groupLabel = (g) => (g ? g.replace("GROUP_", "") + "조" : null);
+
+// Round-of-32 group-rank slots like "A조 1위" / "E조 2위" are deterministic once
+// the group stage ends, but football-data leaves the knockout homeTeam/awayTeam
+// null. We resolve those slots from the standings ourselves.
+// Round-of-16+ slots are SlotRef objects (not strings) and are skipped here.
+const GROUP_RANK_SLOT_RE = /^([A-L])조 ([12])위$/;
+const THIRD_PLACE_SLOT_RE = /조 3위$/; // e.g. "A·B·C·D·F조 3위"
+
+// Third-placed qualifiers also need filling, but football-data leaves them null
+// too and which 3rd-place group lands in which slot is set by FIFA's allocation
+// matrix (495 combinations). This tournament's qualified third-place groups are
+// {B,D,E,F,I,J,K,L}; for that combination the matrix maps each group WINNER's
+// slot to a third-place GROUP as below. Sourced from the FIFA/Wikipedia matrix
+// (winner-column form), cross-checked against each slot's allowed-group list in
+// bracket-2026.ts and football-data's own M81→3B (Bosnia) fill. Keyed by match
+// external_id → the group whose 3rd-placed team fills that match's away slot.
+// Applied only when the live qualified-third groups equal EXPECTED_THIRD_GROUPS;
+// otherwise slots stay as labels until football-data publishes the teams (which,
+// being checked first, always take precedence once present).
+const EXPECTED_THIRD_GROUPS = new Set(["B", "D", "E", "F", "I", "J", "K", "L"]);
+const THIRD_PLACE_BY_MATCH = {
+  "537425": "E", // 1A(Mexico)      ← 3E
+  "537429": "J", // 1B(Switzerland) ← 3J
+  "537421": "B", // 1D(USA)         ← 3B
+  "537415": "D", // 1E(Germany)     ← 3D
+  "537422": "I", // 1G(Belgium)     ← 3I
+  "537416": "F", // 1I(France)      ← 3F
+  "537430": "L", // 1K(Colombia)    ← 3L
+  "537426": "K", // 1L(England)     ← 3K
+};
+
+// Resolves a bracket slot to a football-data team id via the standings 1st/2nd
+// map, or null when the slot is a third-place label / match reference / unknown.
+function slotTeamExternalId(slot, rankByGroup) {
+  if (typeof slot !== "string") return null;
+  const m = GROUP_RANK_SLOT_RE.exec(slot);
+  if (!m) return null;
+  return rankByGroup.get(`${m[1]}${m[2]}`) ?? null;
+}
+
+// Resolves a knockout match's home/away slot to an internal team id, used only
+// when football-data still reports the slot as TBD (homeTeam/awayTeam null).
+// `applyThirds` gates the FIFA third-place allocation (see THIRD_PLACE_BY_MATCH).
+function knockoutSlotTeamId(matchExternalId, side, ctx) {
+  const { rankByGroup, thirdByGroup, applyThirds, idByExternal } = ctx;
+  const slot = KNOCKOUT_SLOTS[String(matchExternalId)]?.[side];
+  const ext = slotTeamExternalId(slot, rankByGroup);
+  if (ext) return idByExternal.get(ext) ?? null;
+  // Third-place slot (always the away side of specific Round-of-32 matches).
+  if (applyThirds && typeof slot === "string" && THIRD_PLACE_SLOT_RE.test(slot)) {
+    const grp = THIRD_PLACE_BY_MATCH[String(matchExternalId)];
+    const t = grp ? thirdByGroup.get(grp) : null;
+    if (t) return idByExternal.get(String(t.id)) ?? null;
+  }
+  return null;
+}
+
+// Adds a football-data team object to the upsert map (idempotent on team id).
+function addTeam(teamMap, t) {
+  if (!t?.id || teamMap.has(t.id)) return;
+  const info = countryFromTla(t.tla, t.name);
+  teamMap.set(t.id, {
+    external_id: String(t.id),
+    name_en: t.name ?? info.ko,
+    name_ko: info.ko,
+    country_code: t.tla ?? null,
+    flag_url: info.flag, // emoji flag stored as display token
+  });
+}
+
+// Reads the standings and returns:
+//   rank          Map<`${group}${1|2}`, teamObj>   group 1st/2nd
+//   thirdByGroup  Map<group, teamObj>              every group's 3rd place
+//   qualifiedThirds Set<group>                     the 8 best third-place groups
+// Empty/degraded result on any failure so the sync falls back to static labels.
+async function fetchStandingsTeams() {
+  const rank = new Map();
+  const thirdByGroup = new Map();
+  const thirds = []; // { group, team, pts, gd, gf } for ranking the best 8
+  try {
+    const res = await fetch("https://api.football-data.org/v4/competitions/WC/standings", {
+      headers: { "X-Auth-Token": FD_TOKEN },
+    });
+    if (!res.ok) {
+      console.error(`! standings HTTP ${res.status} — 32강 자동 매핑 생략`);
+      return { rank, thirdByGroup, qualifiedThirds: new Set() };
+    }
+    const { standings } = await res.json();
+    for (const s of standings ?? []) {
+      if (s.type !== "TOTAL") continue; // home/away splits also exist; we want the overall table
+      const letter = (s.group ?? "").replace("Group ", "").trim();
+      for (const row of s.table ?? []) {
+        const t = row.team;
+        if (!t?.id) continue;
+        if (row.position === 1 || row.position === 2) {
+          rank.set(`${letter}${row.position}`, t);
+        } else if (row.position === 3) {
+          thirdByGroup.set(letter, t);
+          thirds.push({ group: letter, pts: row.points, gd: row.goalDifference, gf: row.goalsFor });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("! standings 조회 실패 — 32강 자동 매핑 생략:", e.message);
+    return { rank, thirdByGroup, qualifiedThirds: new Set() };
+  }
+  // FIFA third-place ranking: points → goal difference → goals scored. Take 8.
+  thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  const qualifiedThirds = new Set(thirds.slice(0, 8).map((x) => x.group));
+  return { rank, thirdByGroup, qualifiedThirds };
+}
 
 // ── Chzzk LIVE auto-linking ──────────────────────────────
 // Chzzk (Naver) holds domestic new-media broadcast rights for the World Cup → official broadcasters
@@ -169,7 +281,11 @@ async function shouldSync() {
 }
 
 async function main() {
-  const guard = await shouldSync();
+  // --force / SYNC_FORCE=1 bypasses the active-window guard for manual runs
+  // (e.g. pushing a bracket update immediately instead of waiting for the next
+  // top-of-hour heartbeat).
+  const force = process.argv.includes("--force") || process.env.SYNC_FORCE === "1";
+  const guard = force ? { sync: true, reason: "강제 실행(--force)" } : await shouldSync();
   if (!guard.sync) {
     console.log(`· 동기화 건너뜀 — ${guard.reason} (킥오프 ${PRE_KICKOFF_H}h 전 ~ ${POST_KICKOFF_H}h 후 경기 없음)`);
     return;
@@ -186,22 +302,34 @@ async function main() {
   const { matches } = await res.json();
   console.log(`· ${matches.length}경기 수신`);
 
-  // 1) Collect teams (skip TBD)
+  // Standings-based fallback for Round-of-32 slots. football-data leaves knockout
+  // homeTeam/awayTeam null even after the group stage ends, so we fill the
+  // deterministic group 1st/2nd slots from the standings, and the third-place
+  // slots from FIFA's allocation matrix (THIRD_PLACE_BY_MATCH) — but only when
+  // the live qualified-third groups match the expected combination.
+  const { rank: rankTeams, thirdByGroup, qualifiedThirds } = await fetchStandingsTeams();
+  const rankByGroup = new Map([...rankTeams].map(([k, t]) => [k, String(t.id)]));
+  const applyThirds =
+    qualifiedThirds.size === EXPECTED_THIRD_GROUPS.size &&
+    [...EXPECTED_THIRD_GROUPS].every((g) => qualifiedThirds.has(g));
+  if (rankByGroup.size) console.log(`· 조별 1·2위 ${rankByGroup.size}슬롯 확정 (32강 자동 매핑)`);
+  if (applyThirds) {
+    console.log(`· 진출 3위 ${qualifiedThirds.size}개 조 → 32강 3위 슬롯 자동 매핑`);
+  } else if (qualifiedThirds.size) {
+    console.error(
+      `! 진출 3위 조 조합이 예상과 달라 3위 자동 배정 생략 (실제: ${[...qualifiedThirds].sort().join(",")})`
+    );
+  }
+
+  // 1) Collect teams (skip TBD). Include standings 1st/2nd and 3rd-place teams so
+  // their ids resolve in idByExternal even if they only appear in pending slots.
   const teamMap = new Map();
   for (const m of matches) {
-    for (const t of [m.homeTeam, m.awayTeam]) {
-      if (t?.id && !teamMap.has(t.id)) {
-        const info = countryFromTla(t.tla, t.name);
-        teamMap.set(t.id, {
-          external_id: String(t.id),
-          name_en: t.name ?? info.ko,
-          name_ko: info.ko,
-          country_code: t.tla ?? null,
-          flag_url: info.flag, // emoji flag stored as display token
-        });
-      }
-    }
+    addTeam(teamMap, m.homeTeam);
+    addTeam(teamMap, m.awayTeam);
   }
+  for (const t of rankTeams.values()) addTeam(teamMap, t);
+  for (const t of thirdByGroup.values()) addTeam(teamMap, t);
   const teams = [...teamMap.values()];
   console.log(`· 팀 ${teams.length}개 upsert...`);
   const { data: teamRows, error: teamErr } = await supabase
@@ -213,14 +341,19 @@ async function main() {
     process.exit(1);
   }
   const idByExternal = new Map(teamRows.map((r) => [r.external_id, r.id]));
+  const slotCtx = { rankByGroup, thirdByGroup, applyThirds, idByExternal };
 
   // 2) Upsert matches
   const rows = matches.map((m) => ({
     external_id: String(m.id),
     stage: m.stage ?? null,
     group_label: groupLabel(m.group),
-    home_team_id: m.homeTeam?.id ? idByExternal.get(String(m.homeTeam.id)) ?? null : null,
-    away_team_id: m.awayTeam?.id ? idByExternal.get(String(m.awayTeam.id)) ?? null : null,
+    home_team_id: m.homeTeam?.id
+      ? idByExternal.get(String(m.homeTeam.id)) ?? null
+      : knockoutSlotTeamId(m.id, "home", slotCtx),
+    away_team_id: m.awayTeam?.id
+      ? idByExternal.get(String(m.awayTeam.id)) ?? null
+      : knockoutSlotTeamId(m.id, "away", slotCtx),
     home_score: m.score?.fullTime?.home ?? null,
     away_score: m.score?.fullTime?.away ?? null,
     status: STATUS_MAP[m.status] ?? "scheduled",
