@@ -84,6 +84,9 @@ function MatchCard({
   // Penalty shootout: main score is the (level) draw after extra time, hp/ap the shootout.
   const hasPen = hasScore && hp != null && ap != null;
   const showScore = hasScore && (!hideSpoilers || revealed);
+  // Reveal the shootout parens only once the score is shown — a blurred `1 (3):(4) 1` is
+  // visibly wider than `1 : 1`, which would leak that the match went to penalties.
+  const showPen = hasPen && showScore;
   // Dim the loser. When decided on penalties the main score is level, so judge by the shootout.
   const homeColor = hasScore && (hasPen ? hp! < ap! : hs! < as!) ? "text-muted" : "text-ink";
   const awayColor = hasScore && (hasPen ? ap! < hp! : as! < hs!) ? "text-muted" : "text-ink";
@@ -131,11 +134,11 @@ function MatchCard({
                 aria-hidden={!showScore}
               >
                 <span className={homeColor}>{hs}</span>
-                {hasPen && (
+                {showPen && (
                   <span className={`ml-1 align-middle text-[0.6em] ${homeColor}`}>({hp})</span>
                 )}
-                <span className={`text-muted ${hasPen ? "mx-0.5" : "mx-1.5"}`}>:</span>
-                {hasPen && (
+                <span className={`text-muted ${showPen ? "mx-0.5" : "mx-1.5"}`}>:</span>
+                {showPen && (
                   <span className={`mr-1 align-middle text-[0.6em] ${awayColor}`}>({ap})</span>
                 )}
                 <span className={awayColor}>{as}</span>
