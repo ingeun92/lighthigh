@@ -54,6 +54,8 @@ export default function HighlightViewer({
   onClose: () => void;
 }) {
   const showScore = !hideScore || revealed;
+  // Penalty shootout: homeScore/awayScore are the draw, homePen/awayPen the shootout (e.g. 1 (6):(5) 1).
+  const hasPen = match.homePen != null && match.awayPen != null;
 
   // Lock background scroll (mobile-safe) while the viewer is open
   useBodyScrollLock();
@@ -98,7 +100,11 @@ export default function HighlightViewer({
             <span className="truncate">{match.home.nameKo}</span>
             {showScore ? (
               <span className="scoreline shrink-0 text-base text-accent sm:text-lg">
-                {match.homeScore} : {match.awayScore}
+                {match.homeScore}
+                {hasPen && <span className="text-[0.78em]"> ({match.homePen})</span>}
+                {" : "}
+                {hasPen && <span className="text-[0.78em]">({match.awayPen}) </span>}
+                {match.awayScore}
               </span>
             ) : (
               <button

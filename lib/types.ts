@@ -29,6 +29,10 @@ export interface Match {
   away: Team;
   homeScore?: number;
   awayScore?: number;
+  // Penalty shootout result (knockout draws only). homeScore/awayScore stay the
+  // pre-shootout draw (after extra time); these hold the shootout tally, e.g. 6:5.
+  homePen?: number;
+  awayPen?: number;
   status: MatchStatus;
   kickoffUtc: string; // ISO
   venue?: string;

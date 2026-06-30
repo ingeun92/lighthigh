@@ -90,4 +90,19 @@ export const MOCK_MATCHES: Match[] = [
     venue: "AT&T Stadium",
     highlights: [],
   },
+  {
+    // 승부차기 예시: 연장까지 1-1 무승부 후 PK 6-5 (브라질 승)
+    id: "m5",
+    stage: "LAST_32",
+    home: team("대한민국", "South Korea", "KOR", "🇰🇷"),
+    away: team("브라질", "Brazil", "BRA", "🇧🇷"),
+    homeScore: 1,
+    awayScore: 1,
+    homePen: 5,
+    awayPen: 6,
+    status: "finished",
+    kickoffUtc: "2026-07-05T18:00:00Z",
+    venue: "Hard Rock Stadium",
+    highlights: [],
+  },
 ];

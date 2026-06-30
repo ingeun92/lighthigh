@@ -78,10 +78,15 @@ function MatchCard({
 
   const hs = match.homeScore;
   const as = match.awayScore;
+  const hp = match.homePen;
+  const ap = match.awayPen;
   const hasScore = played && hs != null && as != null;
+  // Penalty shootout: main score is the (level) draw after extra time, hp/ap the shootout.
+  const hasPen = hasScore && hp != null && ap != null;
   const showScore = hasScore && (!hideSpoilers || revealed);
-  const homeColor = hasScore && hs! < as! ? "text-muted" : "text-ink";
-  const awayColor = hasScore && as! < hs! ? "text-muted" : "text-ink";
+  // Dim the loser. When decided on penalties the main score is level, so judge by the shootout.
+  const homeColor = hasScore && (hasPen ? hp! < ap! : hs! < as!) ? "text-muted" : "text-ink";
+  const awayColor = hasScore && (hasPen ? ap! < hp! : as! < hs!) ? "text-muted" : "text-ink";
 
   const nameCls = "break-keep text-center text-[0.82rem] font-bold leading-tight text-ink";
 
@@ -126,7 +131,13 @@ function MatchCard({
                 aria-hidden={!showScore}
               >
                 <span className={homeColor}>{hs}</span>
-                <span className="mx-1.5 text-muted">:</span>
+                {hasPen && (
+                  <span className={`ml-1 align-middle text-[0.6em] ${homeColor}`}>({hp})</span>
+                )}
+                <span className={`text-muted ${hasPen ? "mx-0.5" : "mx-1.5"}`}>:</span>
+                {hasPen && (
+                  <span className={`mr-1 align-middle text-[0.6em] ${awayColor}`}>({ap})</span>
+                )}
                 <span className={awayColor}>{as}</span>
               </div>
               {!showScore && (
