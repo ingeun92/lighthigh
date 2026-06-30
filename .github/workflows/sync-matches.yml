@@ -7,7 +7,12 @@ name: sync-matches
 # 비경기 시간엔 스크립트 활성 가드가 즉시 종료(매시 정각은 heartbeat 동기화)해
 # Supabase write 부하를 줄인다 — 점수 신선도(활성 구간 5분 동기화)는 그대로.
 on:
-  workflow_dispatch: {} # cron-job.org에서 5분 간격으로 API 호출해 발화 (GitHub schedule throttle 우회)
+  workflow_dispatch: # cron-job.org에서 5분 간격으로 API 호출해 발화 (GitHub schedule throttle 우회)
+    inputs:
+      force:
+        description: "활성-구간 가드를 무시하고 전체 경기를 강제 재동기화 (점수 로직 변경 후 백필용)"
+        type: boolean
+        default: false
 
 # 직전 실행이 안 끝났으면 새 실행을 큐에 쌓지 않고 건너뜀(중복 방지)
 concurrency:
@@ -33,6 +38,9 @@ jobs:
       - name: sync matches
         run: node scripts/sync-matches.mjs
         env:
+          # cron-job.org의 5분 주기 발화는 inputs를 안 넘겨 force=false(=0) → 활성-구간 가드 유지.
+          # 수동 실행에서 force=true 일 때만 SYNC_FORCE=1 로 전체 강제 재동기화.
+          SYNC_FORCE: ${{ inputs.force && '1' || '0' }}
           FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
