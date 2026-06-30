@@ -35,6 +35,45 @@ const STATUS_MAP = {
 
 const groupLabel = (g) => (g ? g.replace("GROUP_", "") + "조" : null);
 
+// Splits football-data's score into the pre-shootout result and the penalty
+// shootout. For a knockout decided on penalties, football-data folds the shootout
+// tally into `fullTime` (e.g. a 1–1 draw won 6–5 on penalties reports 7–6), which
+// otherwise displays as a misleading extra-time score. We strip the shootout back
+// out so home_score/away_score stay the draw (after extra time) and home_pen/
+// away_pen carry the shootout. Non-shootout matches pass through unchanged.
+function splitScore(score) {
+  const ft = score?.fullTime ?? {};
+  let home = ft.home ?? null;
+  let away = ft.away ?? null;
+  let homePen = null;
+  let awayPen = null;
+  const pen = score?.penalties;
+  const reg = score?.regularTime;
+  if (pen && pen.home != null && pen.away != null) {
+    // Explicit shootout node: fullTime = regularTime + extraTime + penalties.
+    homePen = pen.home;
+    awayPen = pen.away;
+    if (home != null) home -= pen.home;
+    if (away != null) away -= pen.away;
+  } else if (score?.duration === "PENALTY_SHOOTOUT" && reg && reg.home != null && reg.away != null) {
+    // No penalties node, but regularTime/extraTime let us recover both halves.
+    const et = score?.extraTime ?? {};
+    const levelHome = reg.home + (et.home ?? 0);
+    const levelAway = reg.away + (et.away ?? 0);
+    if (home != null) {
+      homePen = home - levelHome;
+      home = levelHome;
+    }
+    if (away != null) {
+      awayPen = away - levelAway;
+      away = levelAway;
+    }
+  } else if (score?.duration === "PENALTY_SHOOTOUT") {
+    console.warn(`! 승부차기 경기지만 분해 정보 부족 — fullTime 그대로 저장 (id 미상)`);
+  }
+  return { home, away, homePen, awayPen };
+}
+
 // Round-of-32 group-rank slots like "A조 1위" / "E조 2위" are deterministic once
 // the group stage ends, but football-data leaves the knockout homeTeam/awayTeam
 // null. We resolve those slots from the standings ourselves.
@@ -344,23 +383,28 @@ async function main() {
   const slotCtx = { rankByGroup, thirdByGroup, applyThirds, idByExternal };
 
   // 2) Upsert matches
-  const rows = matches.map((m) => ({
-    external_id: String(m.id),
-    stage: m.stage ?? null,
-    group_label: groupLabel(m.group),
-    home_team_id: m.homeTeam?.id
-      ? idByExternal.get(String(m.homeTeam.id)) ?? null
-      : knockoutSlotTeamId(m.id, "home", slotCtx),
-    away_team_id: m.awayTeam?.id
-      ? idByExternal.get(String(m.awayTeam.id)) ?? null
-      : knockoutSlotTeamId(m.id, "away", slotCtx),
-    home_score: m.score?.fullTime?.home ?? null,
-    away_score: m.score?.fullTime?.away ?? null,
-    status: STATUS_MAP[m.status] ?? "scheduled",
-    kickoff_utc: m.utcDate,
-    venue: m.venue ?? null,
-    updated_at: new Date().toISOString(),
-  }));
+  const rows = matches.map((m) => {
+    const sc = splitScore(m.score);
+    return {
+      external_id: String(m.id),
+      stage: m.stage ?? null,
+      group_label: groupLabel(m.group),
+      home_team_id: m.homeTeam?.id
+        ? idByExternal.get(String(m.homeTeam.id)) ?? null
+        : knockoutSlotTeamId(m.id, "home", slotCtx),
+      away_team_id: m.awayTeam?.id
+        ? idByExternal.get(String(m.awayTeam.id)) ?? null
+        : knockoutSlotTeamId(m.id, "away", slotCtx),
+      home_score: sc.home,
+      away_score: sc.away,
+      home_pen: sc.homePen,
+      away_pen: sc.awayPen,
+      status: STATUS_MAP[m.status] ?? "scheduled",
+      kickoff_utc: m.utcDate,
+      venue: m.venue ?? null,
+      updated_at: new Date().toISOString(),
+    };
+  });
   console.log(`· 경기 ${rows.length}건 upsert...`);
   const { error: matchErr } = await supabase
     .from("matches")

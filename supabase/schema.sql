@@ -22,8 +22,10 @@ create table if not exists matches (
   group_label   text,                        -- 'Group H' 등 (null 가능)
   home_team_id  bigint references teams(id),
   away_team_id  bigint references teams(id),
-  home_score    int,
+  home_score    int,                         -- 정규+연장 종료 점수 (승부차기 제외)
   away_score    int,
+  home_pen      int,                         -- 승부차기 득점 (무승부 후 PK전, 없으면 null)
+  away_pen      int,
   status        match_status not null default 'scheduled',
   kickoff_utc   timestamptz not null,
   venue         text,
@@ -79,7 +81,7 @@ create index if not exists candidates_review_idx on highlight_candidates (review
 create or replace view match_list as
 select
   m.id, m.external_id, m.stage, m.group_label,
-  m.home_score, m.away_score, m.status, m.kickoff_utc, m.venue,
+  m.home_score, m.away_score, m.home_pen, m.away_pen, m.status, m.kickoff_utc, m.venue,
   ht.name_ko as home_name, ht.country_code as home_cc, ht.flag_url as home_flag,
   at.name_ko as away_name, at.country_code as away_cc, at.flag_url as away_flag,
   (select count(*) from highlights h where h.match_id = m.id and h.is_approved) as highlight_count
@@ -104,3 +106,6 @@ grant select on match_list to anon, authenticated;
 -- ── 마이그레이션 (이미 배포된 DB 에 안전하게 재적용) ──────────
 -- 기존 matches 테이블에 LIVE 중계 링크 컬럼 추가 (create table if not exists 는 컬럼을 갱신하지 않음)
 alter table matches add column if not exists live_url text;
+-- 승부차기(PK전) 득점 컬럼 추가 — home_score/away_score 는 정규+연장 무승부 점수, *_pen 은 승부차기 결과
+alter table matches add column if not exists home_pen int;
+alter table matches add column if not exists away_pen int;

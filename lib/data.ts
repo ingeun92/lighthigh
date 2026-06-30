@@ -31,6 +31,8 @@ interface MatchRow {
   group_label: string | null;
   home_score: number | null;
   away_score: number | null;
+  home_pen: number | null;
+  away_pen: number | null;
   status: MatchStatus;
   kickoff_utc: string;
   venue: string | null;
@@ -82,6 +84,8 @@ function mapRow(r: MatchRow, kickoffByExternalId: Map<string, string>): Match {
     away: team(r.away, resolveSlot(slot?.away, kickoffByExternalId)),
     homeScore: r.home_score ?? undefined,
     awayScore: r.away_score ?? undefined,
+    homePen: r.home_pen ?? undefined,
+    awayPen: r.away_pen ?? undefined,
     status: r.status,
     kickoffUtc: r.kickoff_utc,
     // football-data provides no venue for the World Cup, so fall back to the
@@ -99,7 +103,7 @@ export async function getMatches(): Promise<Match[]> {
   const { data, error } = await supabase
     .from("matches")
     .select(
-      `id, external_id, stage, group_label, home_score, away_score, status, kickoff_utc, venue, live_url,
+      `id, external_id, stage, group_label, home_score, away_score, home_pen, away_pen, status, kickoff_utc, venue, live_url,
        home:home_team_id ( name_ko, name_en, country_code, flag_url ),
        away:away_team_id ( name_ko, name_en, country_code, flag_url ),
        highlights ( id, source, url, video_id, title, channel, embeddable, thumbnail_url )`
