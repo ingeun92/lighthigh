@@ -261,7 +261,7 @@ async function syncChzzkLive() {
   if (curErr) {
     // live_url column may not exist yet — surface the error explicitly rather than failing silently.
     console.error(`! 치지직 LIVE 연결 건너뜀 — matches.live_url 확인 필요: ${curErr.message}`);
-    return;
+    return false;
   }
   // Keep a set link alive throughout the match's plausible live window, even if the Chzzk title
   // momentarily stops matching (pre-show/half-time/ad break, or sub-channel generic title) or the
@@ -280,20 +280,26 @@ async function syncChzzkLive() {
       return now - new Date(m.kickoff_utc).getTime() > LIVE_LINK_TTL_H * 3600_000;
     })
     .map((m) => m.id);
+  // Track whether any live_url actually changed so the caller can decide whether
+  // to trigger an ISR revalidation (the live button is user-visible).
+  let liveChanged = false;
   for (const [matchId, url] of liveUrlByMatch) {
     const existing = (current ?? []).find((m) => m.id === matchId);
     if (existing?.live_url !== url) {
       const { error } = await supabase.from("matches").update({ live_url: url }).eq("id", matchId);
       if (error) console.error(`! live_url 업데이트 실패(match ${matchId}): ${error.message}`);
+      else liveChanged = true;
     }
   }
   if (toClear.length) {
     const { error } = await supabase.from("matches").update({ live_url: null }).in("id", toClear);
     if (error) console.error(`! live_url 해제 실패: ${error.message}`);
+    else liveChanged = true;
   }
   console.log(
     `· 치지직 LIVE 연결 — 활성 ${liveUrlByMatch.size}건, 해제 ${toClear.length}건`
   );
+  return liveChanged;
 }
 
 // Active sync guard: keep the 5-min cron but only fetch+upsert during the "active match window"
@@ -317,6 +323,33 @@ async function shouldSync() {
   return data?.length
     ? { sync: true, reason: "활성 경기 구간" }
     : { sync: false, reason: "비경기 시간" };
+}
+
+// Pings the site's on-demand ISR endpoint so the home page cache is rewritten
+// now (instead of on the old 60s clock). No-ops with a log if the env isn't set,
+// so local runs and misconfigured deploys degrade to the time-based fallback
+// (page.tsx revalidate) rather than failing the sync. Retries a couple of times
+// because a lost POST would otherwise leave the cache stale until that fallback.
+async function triggerRevalidate(reason) {
+  const url = process.env.REVALIDATE_URL;
+  const secret = process.env.REVALIDATE_SECRET;
+  if (!url || !secret) {
+    console.log("· REVALIDATE_URL/SECRET 미설정 — 재검증 호출 생략 (시간 기반 폴백 사용)");
+    return;
+  }
+  const target = `${url}${url.includes("?") ? "&" : "?"}secret=${encodeURIComponent(secret)}`;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const r = await fetch(target, { method: "POST" });
+      if (r.ok) {
+        console.log(`· ISR 재검증 트리거 완료 (${reason})`);
+        return;
+      }
+      console.error(`! ISR 재검증 HTTP ${r.status} (시도 ${attempt}/3)`);
+    } catch (e) {
+      console.error(`! ISR 재검증 호출 오류 (시도 ${attempt}/3): ${e.message}`);
+    }
+  }
 }
 
 async function main() {
@@ -382,7 +415,25 @@ async function main() {
   const idByExternal = new Map(teamRows.map((r) => [r.external_id, r.id]));
   const slotCtx = { rankByGroup, thirdByGroup, applyThirds, idByExternal };
 
-  // 2) Upsert matches
+  // 2) Upsert matches.
+  // Snapshot the current display-relevant fields first so we can tell whether this
+  // sync actually changed anything user-visible → only then trigger an ISR revalidate.
+  const CHANGE_FIELDS = [
+    "home_team_id",
+    "away_team_id",
+    "home_score",
+    "away_score",
+    "home_pen",
+    "away_pen",
+    "status",
+    "kickoff_utc",
+    "venue",
+  ];
+  const { data: existingMatches } = await supabase
+    .from("matches")
+    .select(`external_id, ${CHANGE_FIELDS.join(", ")}`);
+  const prevByExternal = new Map((existingMatches ?? []).map((r) => [r.external_id, r]));
+
   const rows = matches.map((m) => {
     const sc = splitScore(m.score);
     return {
@@ -417,11 +468,27 @@ async function main() {
   const finished = rows.filter((r) => r.status === "finished").length;
   console.log(`✓ 동기화 완료 — 경기 ${rows.length}건 (종료 ${finished}건), 팀 ${teams.length}개`);
 
+  // Did any user-visible match field change vs. the pre-upsert snapshot?
+  const matchesChanged = rows.some((r) => {
+    const prev = prevByExternal.get(r.external_id);
+    if (!prev) return true; // new match row
+    return CHANGE_FIELDS.some((k) => (prev[k] ?? null) !== (r[k] ?? null));
+  });
+
   // Link Chzzk official channel lives (failure does not affect the match sync result)
+  let liveChanged = false;
   try {
-    await syncChzzkLive();
+    liveChanged = await syncChzzkLive();
   } catch (e) {
     console.error("! 치지직 LIVE 연결 경고:", e.message);
+  }
+
+  // Trigger on-demand ISR only when something actually changed (or on a forced
+  // backfill run). This decouples ISR writes from traffic × the old 60s clock.
+  if (matchesChanged || liveChanged || force) {
+    await triggerRevalidate(force ? "강제 실행" : "데이터 변경 감지");
+  } else {
+    console.log("· 변경 없음 — ISR 재검증 생략 (Write Units 절약)");
   }
 }
 

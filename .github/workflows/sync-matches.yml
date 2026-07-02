@@ -44,3 +44,7 @@ jobs:
           FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # 온디맨드 ISR: 데이터가 실제로 바뀐 동기화만 홈페이지 캐시를 재검증해
+          # ISR Write Units 소비를 줄인다. 미설정 시 시간 기반 폴백(page.tsx revalidate)으로 동작.
+          REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}

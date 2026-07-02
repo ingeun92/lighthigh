@@ -2,9 +2,12 @@ import ScheduleList from "@/components/ScheduleList";
 import { getMatches } from "@/lib/data";
 import { kstDateKey } from "@/lib/format";
 
-// Revalidate every 60s to keep live scores fresh (5-min sync cron → max ~6-min delay).
-// ISR is stale-while-revalidate, so pages regenerate only under traffic — no overhead during off-hours.
-export const revalidate = 60;
+// On-demand ISR: the 5-min sync cron pings /api/revalidate only when match data
+// actually changes, so we no longer rewrite the cache on a fixed clock (the old
+// revalidate=60 rewrote the whole page up to ~1,440×/day/region regardless of
+// whether anything changed — the dominant ISR-write cost). This long fallback is
+// just a safety net for a missed/lost revalidate call.
+export const revalidate = 3600;
 
 export default async function Home() {
   const matches = await getMatches();
