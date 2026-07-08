@@ -41,6 +41,14 @@ const groupLabel = (g) => (g ? g.replace("GROUP_", "") + "조" : null);
 // otherwise displays as a misleading extra-time score. We strip the shootout back
 // out so home_score/away_score stay the draw (after extra time) and home_pen/
 // away_pen carry the shootout. Non-shootout matches pass through unchanged.
+//
+// Source priority: derive the level (post-ET draw) from regularTime + extraTime
+// and back out the shootout as fullTime − level. We do NOT trust the `penalties`
+// node when regularTime is present, because football-data's penalties node is
+// occasionally wrong while fullTime stays correct — e.g. WC id 537382 (SUI–COL,
+// 0–0 a.e.t., won 4–3 on penalties) reported fullTime {4,3}, regularTime {0,0},
+// extraTime {0,0} but penalties {3,3}. Trusting the node yielded 1(3):(3)0.
+// The `penalties` node is the fallback only when regularTime is missing.
 function splitScore(score) {
   const ft = score?.fullTime ?? {};
   let home = ft.home ?? null;
@@ -49,14 +57,9 @@ function splitScore(score) {
   let awayPen = null;
   const pen = score?.penalties;
   const reg = score?.regularTime;
-  if (pen && pen.home != null && pen.away != null) {
-    // Explicit shootout node: fullTime = regularTime + extraTime + penalties.
-    homePen = pen.home;
-    awayPen = pen.away;
-    if (home != null) home -= pen.home;
-    if (away != null) away -= pen.away;
-  } else if (score?.duration === "PENALTY_SHOOTOUT" && reg && reg.home != null && reg.away != null) {
-    // No penalties node, but regularTime/extraTime let us recover both halves.
+  const isShootout = score?.duration === "PENALTY_SHOOTOUT" || (pen && pen.home != null && pen.away != null);
+  if (isShootout && reg && reg.home != null && reg.away != null) {
+    // Preferred: level = regularTime + extraTime; shootout = fullTime − level.
     const et = score?.extraTime ?? {};
     const levelHome = reg.home + (et.home ?? 0);
     const levelAway = reg.away + (et.away ?? 0);
@@ -68,6 +71,20 @@ function splitScore(score) {
       awayPen = away - levelAway;
       away = levelAway;
     }
+    // Surface upstream inconsistency (fullTime-derived shootout ≠ penalties node)
+    // without acting on it — fullTime is the reliable aggregate.
+    if (pen && pen.home != null && pen.away != null && (pen.home !== homePen || pen.away !== awayPen)) {
+      console.warn(
+        `! 승부차기 penalties 노드와 fullTime 불일치 (id 미상) — ` +
+          `node {${pen.home},${pen.away}} vs fullTime기반 {${homePen},${awayPen}}, fullTime 채택`
+      );
+    }
+  } else if (pen && pen.home != null && pen.away != null) {
+    // No regularTime breakdown, but an explicit shootout node: fullTime = level + penalties.
+    homePen = pen.home;
+    awayPen = pen.away;
+    if (home != null) home -= pen.home;
+    if (away != null) away -= pen.away;
   } else if (score?.duration === "PENALTY_SHOOTOUT") {
     console.warn(`! 승부차기 경기지만 분해 정보 부족 — fullTime 그대로 저장 (id 미상)`);
   }
